@@ -10,23 +10,16 @@ const auth = useAuthStore();
 
 const email = ref("");
 const password = ref("");
-const error = ref("");
 const showPassword = ref(false);
 const loading = ref(false);
+const error = ref("");
 
-const toast = ref({
-  show: false,
-  message: "",
-  type: "success",
-});
+const submitLogin = async () => {
+  if (!email.value || !password.value) {
+    error.value = "Vui lòng nhập email và mật khẩu.";
+    return;
+  }
 
-function showToast(message, type = "success") {
-  toast.value = { show: true, message, type };
-  setTimeout(() => (toast.value.show = false), 3000);
-}
-
-const onSubmit = async () => {
-  error.value = "";
   loading.value = true;
 
   try {
@@ -39,146 +32,97 @@ const onSubmit = async () => {
       const token = res.data.result;
       Cookies.set("jwt_token", token);
       auth.setToken(token);
-      showToast("Đăng nhập thành công!", "success");
-      setTimeout(() => {
-        router.push({ name: "Home" });
-      }, 1000);
+      await auth.fetchUser();
+      router.push({ name: "Home" });
     } else {
-      error.value = res.data.message || "Đăng nhập thất bại. Vui lòng thử lại.";
+      error.value = res.data.message || "Đăng nhập thất bại.";
     }
-  } catch (err) {
-    error.value = "Không thể kết nối máy chủ.";
+  } catch (e) {
+    console.error("Login error:", e); // Add this
+    error.value = "Không thể kết nối.";
   } finally {
     loading.value = false;
   }
 };
 </script>
-<style>
-@import "@/assets/styles/toast.css";
-</style>
 
 <template>
-  <!-- Toast -->
-  <transition name="slide-fade">
+  <div class="min-h-screen bg-gray-100 flex items-center justify-center px-3">
     <div
-      v-if="toast.show"
-      :class="[
-        'fixed top-5 right-5 min-w-[250px] px-4 py-3 rounded-lg shadow-md text-gray-800 bg-white border-l-4 z-50',
-        toast.type === 'success' ? 'border-green-500' : 'border-red-500',
-      ]"
+      class="bg-white w-full max-w-md rounded-2xl p-8 shadow-xl relative overflow-hidden"
     >
-      {{ toast.message }}
-    </div>
-  </transition>
-  <div class="min-h-screen w-full bg-white flex items-center justify-center px-4">
-    <div class="w-full max-w-md">
-      <!-- Logo -->
-      <div class="text-center mb-6 select-none">
-        <div class="text-4xl font-extrabold leading-none">
-          <span class="text-red-600">VN</span><span class="text-blue-600">PAY</span>
+      <!-- Vòng tròn mờ góc phải -->
+      <div
+        class="absolute -top-10 -right-10 w-40 h-40 bg-blue-100 rounded-full opacity-40"
+      ></div>
+
+      <!-- Logo + Title -->
+      <div class="text-center relative z-10 mb-6">
+        <img src="/logo.png" alt="Logo" class="w-48 object-contain mx-auto" />
+        <h2 class="text-lg font-semibold mt-1">Đăng nhập quản trị</h2>
+        <p class="text-sm text-gray-500 mt-1">Nhập thông tin tài khoản để tiếp tục</p>
+      </div>
+
+      <!-- Error -->
+      <div v-if="error" class="mb-3 text-sm text-red-600">
+        {{ error }}
+      </div>
+
+      <!-- Form -->
+      <form @submit.prevent="submitLogin" class="space-y-4 relative z-10">
+        <!-- Email -->
+        <div>
+          <label class="text-sm font-medium">Email</label>
+          <input
+            v-model="email"
+            type="email"
+            class="w-full mt-1 px-4 py-3 bg-blue-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-300 outline-none"
+            placeholder="email@domain.com"
+          />
         </div>
-        <p class="mt-2 text-sm text-black/80 tracking-wide">ĐĂNG NHẬP VÀO HỆ THỐNG</p>
-      </div>
 
-      <!-- Card -->
-      <div class="bg-white/95 rounded-md shadow-lg p-6">
-        <form @submit.prevent="onSubmit">
-          <!-- Error -->
-          <div
-            v-if="error"
-            class="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
-          >
-            {{ error }}
-          </div>
-
-          <!-- Email -->
-          <label class="block text-sm font-medium text-gray-700">
-            Email
+        <!-- Password -->
+        <div>
+          <label class="text-sm font-medium">Mật khẩu</label>
+          <div class="relative mt-1">
             <input
-              v-model.trim="email"
-              type="email"
-              placeholder="email@domain.com"
-              class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-              autocomplete="username"
+              v-model="password"
+              :type="showPassword ? 'text' : 'password'"
+              class="w-full px-4 py-3 bg-blue-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-300 outline-none"
+              placeholder="••••••••"
             />
-          </label>
-
-          <!-- Password -->
-          <label class="block text-sm font-medium text-gray-700 mt-4">
-            Mật khẩu
-            <div
-              class="mt-1 relative flex items-center rounded-md border border-gray-300 focus-within:ring-2 focus-within:ring-blue-600 focus-within:border-transparent"
+            <button
+              type="button"
+              @click="showPassword = !showPassword"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600"
             >
-              <input
-                v-model="password"
-                :type="showPassword ? 'text' : 'password'"
-                placeholder="••••••••"
-                class="w-full rounded-md px-3 py-2 pr-10 text-gray-900 placeholder:text-gray-400 focus:outline-none"
-                autocomplete="current-password"
-              />
+              <i
+                :class="showPassword ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye'"
+              ></i>
+            </button>
+          </div>
+        </div>
 
-              <button
-                type="button"
-                @click="showPassword = !showPassword"
-                class="absolute right-2 inline-flex h-8 w-8 items-center justify-center rounded hover:bg-gray-100 text-gray-500"
-              >
-                <svg
-                  v-if="!showPassword"
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-5 w-5"
-                  fill="none"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7
-                           -1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                  />
-                </svg>
+        <!-- Login Button -->
+        <button
+          type="submit"
+          :disabled="loading"
+          class="w-full py-3 mt-2 text-white font-semibold rounded-lg bg-gradient-to-r from-blue-500 to-indigo-500 hover:opacity-90 transition disabled:opacity-50"
+        >
+          {{ loading ? "Đang đăng nhập..." : "ĐĂNG NHẬP" }}
+        </button>
 
-                <svg
-                  v-else
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-5 w-5"
-                  fill="none"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M13.875 18.825A10.05 10.05 0 0112 19c-4.477 0-8.268-2.943-9.542-7
-                          a10.05 10.05 0 012.873-4.28M6.1 6.1A9.957 9.957 0 0112 5c4.477 0 8.268
-                          2.943 9.542 7a10.05 10.05 0 01-4.201 5.315M3 3l18 18"
-                  />
-                </svg>
-              </button>
-            </div>
-          </label>
+        <!-- Links -->
+        <div class="flex justify-between text-sm text-gray-600 mt-1">
+          <a href="#" class="hover:underline">Quên mật khẩu?</a>
+          <a href="/register" class="hover:underline text-blue-600">Đăng ký</a>
+        </div>
+      </form>
 
-          <!-- Submit -->
-          <button
-            type="submit"
-            :disabled="loading"
-            class="mt-6 w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2.5 rounded-md disabled:opacity-60 disabled:cursor-not-allowed transition"
-          >
-            {{ loading ? "Đang đăng nhập..." : "ĐĂNG NHẬP" }}
-          </button>
-
-          <p class="mt-4 text-sm text-gray-600 text-center">
-            Bạn chưa có tài khoản?
-            <a href="/register" class="text-blue-700 hover:underline">Đăng ký</a>
-          </p>
-        </form>
-      </div>
+      <!-- Footer -->
+      <p class="text-center text-xs text-gray-400 mt-6 relative z-10">
+        Thiết kế bởi đấu giá STU — © 2025
+      </p>
     </div>
   </div>
 </template>

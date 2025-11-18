@@ -6,6 +6,22 @@ const users = ref([]);
 const loading = ref(true);
 const search = ref("");
 
+// --- Popup state ---
+const isPopupOpen = ref(false);
+const selectedUser = ref(null);
+
+// mở popup
+const openPopup = (user) => {
+  selectedUser.value = user;
+  isPopupOpen.value = true;
+};
+
+// đóng popup
+const closePopup = () => {
+  isPopupOpen.value = false;
+  selectedUser.value = null;
+};
+
 const fetchUsers = async () => {
   loading.value = true;
   try {
@@ -59,9 +75,10 @@ onMounted(fetchUsers);
             <th class="px-4 py-3 text-left font-medium">Họ tên</th>
             <th class="px-4 py-3 text-left font-medium">Email</th>
             <th class="px-4 py-3 text-left font-medium">SĐT</th>
-            <th class="px-4 py-3 text-left font-medium">Thành phố</th>
+            <!-- <th class="px-4 py-3 text-left font-medium">Thành phố</th> -->
             <th class="px-4 py-3 text-left font-medium">TT xác thực</th>
             <th class="px-4 py-3 text-left font-medium">Trạng thái</th>
+            <th class="px-4 py-3 text-left font-medium">Hành động</th>
           </tr>
         </thead>
 
@@ -71,21 +88,13 @@ onMounted(fetchUsers);
               {{ u.matk }}
             </td>
 
-            <td class="px-4 py-3">
-              {{ fullName(u) }}
-            </td>
+            <td class="px-4 py-3">{{ fullName(u) }}</td>
 
-            <td class="px-4 py-3">
-              {{ u.email }}
-            </td>
+            <td class="px-4 py-3">{{ u.email }}</td>
 
-            <td class="px-4 py-3">
-              {{ u.sdt }}
-            </td>
+            <td class="px-4 py-3">{{ u.sdt }}</td>
 
-            <td class="px-4 py-3">
-              {{ u.thanhPho?.tentp }}
-            </td>
+            <!-- <td class="px-4 py-3">{{ u.thanhPho?.tentp }}</td> -->
 
             <!-- Xác thực -->
             <td class="px-4 py-3">
@@ -114,15 +123,58 @@ onMounted(fetchUsers);
                 {{ u.trangthaidangnhap }}
               </span>
             </td>
+
+            <!-- Button xem -->
+            <td class="px-4 py-3">
+              <button
+                @click="openPopup(u)"
+                class="px-3 py-1 text-xs rounded-md bg-blue-600 text-white hover:bg-blue-700"
+              >
+                Xem
+              </button>
+            </td>
           </tr>
 
           <tr v-if="filteredUsers.length === 0">
-            <td colspan="7" class="text-center py-4 text-gray-500">
+            <td colspan="8" class="text-center py-4 text-gray-500">
               Không tìm thấy người dùng nào.
             </td>
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Popup chi tiết user -->
+    <div
+      v-if="isPopupOpen"
+      class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4"
+    >
+      <div class="bg-white w-96 p-5 rounded-xl shadow-lg">
+        <h2 class="text-lg font-semibold mb-3 text-gray-800">Thông tin chi tiết</h2>
+
+        <div class="space-y-2 text-sm">
+          <p><strong>Mã tài khoản:</strong> {{ selectedUser.matk }}</p>
+          <p><strong>Họ tên:</strong> {{ fullName(selectedUser) }}</p>
+          <p><strong>Email:</strong> {{ selectedUser.email }}</p>
+          <p><strong>SĐT:</strong> {{ selectedUser.sdt }}</p>
+          <p><strong>Thành phố:</strong> {{ selectedUser.thanhPho?.tentp }}</p>
+          <p><strong>Địa chỉ:</strong> {{ selectedUser.diachi }}</p>
+          <p><strong>Địa chỉ giao hàng:</strong> {{ selectedUser.diachigiaohang }}</p>
+          <p>
+            <strong>Trạng thái đăng nhập:</strong> {{ selectedUser.trangthaidangnhap }}
+          </p>
+          <p><strong>Trạng thái xác thực:</strong> {{ selectedUser.xacthuctaikhoan }}</p>
+        </div>
+
+        <div class="mt-4 text-right">
+          <button
+            @click="closePopup"
+            class="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300"
+          >
+            Đóng
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
