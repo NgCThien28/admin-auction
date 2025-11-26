@@ -14,7 +14,7 @@ const stats = [
       <div
         v-for="s in stats"
         :key="s.label"
-        class="rounded-md bg-blue-700 text-white p-4"
+        class="rounded-md bg-blue-600 text-white p-4"
       >
         <div class="text-2xl font-bold">{{ s.value }}</div>
         <div class="text-white/90">{{ s.label }}</div>

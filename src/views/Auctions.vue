@@ -119,7 +119,7 @@ onMounted(fetchAuctions);
                 @click="openPopup(a)"
                 class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
-                Xem chi tiết
+                Chi tiết
               </button>
             </td>
           </tr>

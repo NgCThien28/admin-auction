@@ -7,6 +7,7 @@ const Home = () => import('../views/Home.vue')
 const Users = () => import('../views/Users.vue')
 const Auctions = () => import('../views/Auctions.vue')
 const Reports = () => import('../views/Reports.vue')
+const Products = () => import('../views/Products.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -21,6 +22,7 @@ const router = createRouter({
         { path: 'users', name: 'Users', component: Users, meta: { requiresAuth: true } },
         { path: 'auctions', name: 'Auctions', component: Auctions, meta: { requiresAuth: true } },
         { path: 'reports', name: 'Reports', component: Reports, meta: { requiresAuth: true } },
+        { path: 'products', name: 'Products', component: Products, meta: { requiresAuth: true } },
       ],
     },
 

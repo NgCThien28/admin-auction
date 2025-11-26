@@ -17,6 +17,12 @@ const items = [
     name: "Auctions",
     icon: "M4 4h16v4H4zm2 6h12v2H6zm0 4h12v2H6zm0 4h8v2H6z",
   },
+  {
+    label: "Sản phẩm",
+    name: "Products",
+    icon:
+      "M20 6h-3V4a1 1 0 0 0-1-1h-8a1 1 0 0 0-1 1v2H4a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2zM9 5h6v1H9zm11 14H4V9h16z",
+  },
   { label: "Báo cáo", name: "Reports", icon: "M3 13h6v8H3zm12-6h6v14h-6zM9 3h6v18H9z" },
 ];
 
@@ -28,7 +34,7 @@ const isActive = (name) => computed(() => route.name === name);
     <!-- Logo -->
     <div class="px-4 py-5 border-b">
       <div class="text-3xl font-extrabold select-none">
-        <span class="text-red-600">VN</span><span class="text-blue-600">PAY</span>
+        <img src="/logo.png" alt="Logo" class="w-48 object-contain mx-auto" />
       </div>
       <p class="text-xs text-gray-500 mt-1">Cho cuộc sống đơn giản hơn</p>
     </div>
