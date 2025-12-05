@@ -88,7 +88,8 @@ const banUser = async (matk) => {
     }
   } catch (err) {
     console.error("Lỗi khi khoá tài khoản:", err);
-    const msg = err?.response?.data?.message || "Khoá tài khoản thất bại. Vui lòng thử lại sau.";
+    const msg =
+      err?.response?.data?.message || "Khoá tài khoản thất bại. Vui lòng thử lại sau.";
     alert(msg);
   } finally {
     setBusy(matk, false);
@@ -114,7 +115,8 @@ const unbanUser = async (matk) => {
     }
   } catch (err) {
     console.error("Lỗi khi mở khoá tài khoản:", err);
-    const msg = err?.response?.data?.message || "Mở khoá tài khoản thất bại. Vui lòng thử lại sau.";
+    const msg =
+      err?.response?.data?.message || "Mở khoá tài khoản thất bại. Vui lòng thử lại sau.";
     alert(msg);
   } finally {
     setBusy(matk, false);
@@ -160,7 +162,7 @@ onMounted(fetchUsers);
             <th class="px-4 py-3 text-left font-medium">Họ tên</th>
             <th class="px-4 py-3 text-left font-medium">Email</th>
             <th class="px-4 py-3 text-left font-medium">SĐT</th>
-            <th class="px-4 py-3 text-left font-medium">TT xác thực</th>
+            <th class="px-4 py-3 text-left font-medium">Tình trạng xác thực</th>
             <th class="px-4 py-3 text-left font-medium">Trạng thái</th>
             <th class="px-4 py-3 text-left font-medium">Hành động</th>
           </tr>
@@ -191,7 +193,8 @@ onMounted(fetchUsers);
               <span
                 class="px-2 py-1 text-xs rounded-full"
                 :class="
-                  u.trangthaidangnhap === 'Đang hoạt động' || u.trangthaidangnhap === 'Ngoại tuyến'
+                  u.trangthaidangnhap === 'Đang hoạt động' ||
+                  u.trangthaidangnhap === 'Ngoại tuyến'
                     ? 'bg-blue-100 text-blue-700'
                     : 'bg-red-100 text-red-700'
                 "
@@ -212,15 +215,28 @@ onMounted(fetchUsers);
               <button
                 @click="toggleBan(u)"
                 :disabled="isBusy(u.matk)"
-                :title="u.trangthaidangnhap === 'Đang hoạt động' || u.trangthaidangnhap === 'Ngoại tuyến' ? 'Khoá tài khoản' : 'Mở khoá tài khoản'"
+                :title="
+                  u.trangthaidangnhap === 'Đang hoạt động' ||
+                  u.trangthaidangnhap === 'Ngoại tuyến'
+                    ? 'Khoá tài khoản'
+                    : 'Mở khoá tài khoản'
+                "
                 class="px-3 py-1 text-xs rounded-md text-white"
-                :class="u.trangthaidangnhap === 'Đang hoạt động' || u.trangthaidangnhap === 'Ngoại tuyến'
-                  ? 'bg-red-600 hover:bg-red-700 disabled:opacity-50'
-                  : 'bg-green-600 hover:bg-green-700 disabled:opacity-50'"
+                :class="
+                  u.trangthaidangnhap === 'Đang hoạt động' ||
+                  u.trangthaidangnhap === 'Ngoại tuyến'
+                    ? 'bg-red-600 hover:bg-red-700 disabled:opacity-50'
+                    : 'bg-green-600 hover:bg-green-700 disabled:opacity-50'
+                "
               >
                 <span v-if="isBusy(u.matk)">...</span>
                 <span v-else>
-                  {{ u.trangthaidangnhap === 'Đang hoạt động' || u.trangthaidangnhap === 'Ngoại tuyến' ? 'Khoá' : 'Mở khoá' }}
+                  {{
+                    u.trangthaidangnhap === "Đang hoạt động" ||
+                    u.trangthaidangnhap === "Ngoại tuyến"
+                      ? "Khoá"
+                      : "Mở khoá"
+                  }}
                 </span>
               </button>
             </td>
@@ -238,49 +254,96 @@ onMounted(fetchUsers);
     <!-- Popup chi tiết user -->
     <div
       v-if="isPopupOpen"
-      class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4"
+      class="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center"
     >
-      <div class="bg-white w-96 p-5 rounded-xl shadow-lg">
-        <h2 class="text-lg font-semibold mb-3 text-gray-800">Thông tin chi tiết</h2>
-
-        <div class="space-y-2 text-sm">
-          <p><strong>Mã tài khoản:</strong> {{ selectedUser.matk }}</p>
-          <p><strong>Họ tên:</strong> {{ fullName(selectedUser) }}</p>
-          <p><strong>Email:</strong> {{ selectedUser.email }}</p>
-          <p><strong>SĐT:</strong> {{ selectedUser.sdt }}</p>
-          <p><strong>Thành phố:</strong> {{ selectedUser.thanhPho?.tentp }}</p>
-          <p><strong>Địa chỉ:</strong> {{ selectedUser.diachi }}</p>
-          <p><strong>Địa chỉ giao hàng:</strong> {{ selectedUser.diachigiaohang }}</p>
-          <p>
-            <strong>Trạng thái đăng nhập:</strong> {{ selectedUser.trangthaidangnhap }}
-          </p>
-          <p><strong>Trạng thái xác thực:</strong> {{ selectedUser.xacthuctaikhoan }}</p>
+      <div
+        class="bg-white w-[460px] rounded-xl border border-gray-200 shadow-xl rounded-2xl p-6"
+      >
+        <div class="flex justify-between items-center mb-4 border-b pb-2">
+          <h2 class="text-lg font-semibold text-gray-800">Thông tin người dùng</h2>
+          <button
+            @click="closePopup"
+            class="w-7 h-7 flex items-center justify-center rounded-md hover:bg-gray-100 transition"
+          >
+            ✕
+          </button>
         </div>
 
-        <div class="mt-4 flex justify-between items-center">
-          <div>
-            <button
-              @click="toggleBan(selectedUser)"
-              :disabled="isBusy(selectedUser?.matk)"
-              :class="selectedUser?.trangthaidangnhap === 'Đang hoạt động' || selectedUser?.trangthaidangnhap === 'Ngoại tuyến'
-                ? 'px-3 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-50'
-                : 'px-3 py-2 rounded-md bg-green-600 text-white hover:bg-green-700 disabled:opacity-50'"
-            >
-              <span v-if="isBusy(selectedUser?.matk)">...</span>
-              <span v-else>
-                {{ selectedUser?.trangthaidangnhap === 'Đang hoạt động' ? 'Khoá tài khoản' : 'Mở khoá tài khoản' }}
-              </span>
-            </button>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+          <div class="bg-gray-50 rounded-lg p-3">
+            <span class="text-xs text-gray-500">Mã tài khoản</span>
+            <p class="text-sm font-medium text-gray-900">
+              {{ selectedUser.matk }}
+            </p>
           </div>
 
-          <div>
-            <button
-              @click="closePopup"
-              class="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300"
-            >
-              Đóng
-            </button>
+          <div class="bg-gray-50 rounded-lg p-3">
+            <span class="text-xs text-gray-500">Họ tên</span>
+            <p class="text-sm font-medium text-gray-900">
+              {{ fullName(selectedUser) }}
+            </p>
           </div>
+
+          <div class="bg-gray-50 rounded-lg p-3">
+            <span class="text-xs text-gray-500">Email</span>
+            <p class="text-sm font-medium text-gray-900">
+              {{ selectedUser.email }}
+            </p>
+          </div>
+
+          <div class="bg-gray-50 rounded-lg p-3">
+            <span class="text-xs text-gray-500">SĐT</span>
+            <p class="text-sm font-medium text-gray-900">
+              {{ selectedUser.sdt }}
+            </p>
+          </div>
+
+          <div class="bg-gray-50 rounded-lg p-3">
+            <span class="text-xs text-gray-500">Thành phố</span>
+            <p class="text-sm font-medium text-gray-900">
+              {{ selectedUser.thanhPho?.tentp }}
+            </p>
+          </div>
+
+          <div class="bg-gray-50 rounded-lg p-3">
+            <span class="text-xs text-gray-500">Địa chỉ</span>
+            <p class="text-sm font-medium text-gray-900">
+              {{ selectedUser.diachi }}
+            </p>
+          </div>
+          <div class="bg-gray-50 rounded-lg p-3">
+            <span class="text-xs text-gray-500">Địac chỉ giao hàng</span>
+            <p class="text-sm font-medium text-gray-900">
+              {{ selectedUser.diachigiaohang }}
+            </p>
+          </div>
+          <div class="bg-gray-50 rounded-lg p-3">
+            <span class="text-xs text-gray-500">Trạng thái đăng nhập</span>
+            <p class="text-sm font-medium text-gray-900">
+              {{ selectedUser.trangthaidangnhap }}
+            </p>
+          </div>
+          <div class="bg-gray-50 rounded-lg p-3">
+            <span class="text-xs text-gray-500">Trạng thái xác thực</span>
+            <p class="text-sm font-medium text-gray-900">
+              {{ selectedUser.xacthuctaikhoan }}
+            </p>
+          </div>
+        </div>
+
+        <div class="mt-6 flex justify-end gap-2">
+          <button
+            @click="toggleBan(selectedUser)"
+            :disabled="isBusy(selectedUser.matk)"
+            class="px-4 py-2 rounded-md text-sm text-white bg-black hover:bg-gray-800 disabled:opacity-50"
+          >
+            {{
+              selectedUser?.trangthaidangnhap === "Đang hoạt động" ||
+              selectedUser?.trangthaidangnhap === "Ngoại tuyến"
+                ? "Khoá tài khoản"
+                : "Mở khoá tài khoản"
+            }}
+          </button>
         </div>
       </div>
     </div>

@@ -43,6 +43,15 @@ export const useAuthStore = defineStore('auth', {
       this.user = null
       this.token = null
       Cookies.remove('jwt_token')
-    }
+    },
+    
+    // 🔹 Load lại user khi reload trang
+    async loadUserFromCookies() {
+      const token = Cookies.get('jwt_token')
+      if (token && !this.user) {
+        this.token = token
+        await this.fetchUser()
+      }
+    },
   }
 })

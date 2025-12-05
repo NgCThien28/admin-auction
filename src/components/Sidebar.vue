@@ -36,7 +36,6 @@ const isActive = (name) => computed(() => route.name === name);
       <div class="text-3xl font-extrabold select-none">
         <img src="/logo.png" alt="Logo" class="w-48 object-contain mx-auto" />
       </div>
-      <p class="text-xs text-gray-500 mt-1">Cho cuộc sống đơn giản hơn</p>
     </div>
 
     <!-- Nav -->
