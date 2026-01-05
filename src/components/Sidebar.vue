@@ -5,7 +5,12 @@ import { useRoute } from "vue-router";
 const route = useRoute();
 
 const items = [
-  { label: "Màn hình chính", name: "Home", icon: "M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" },
+  {
+    label: "Màn hình chính",
+    name: "Home",
+    icon:
+      "m12 5.432 8.159 8.159c.03.03.06.058.091.086v6.198c0 1.035-.84 1.875-1.875 1.875H15a.75.75 0 0 1-.75-.75v-4.5a.75.75 0 0 0-.75-.75h-3a.75.75 0 0 0-.75.75V21a.75.75 0 0 1-.75.75H5.625a1.875 1.875 0 0 1-1.875-1.875v-6.198a2.29 2.29 0 0 0 .091-.086L12 5.432Z",
+  },
   {
     label: "Quản lý người dùng",
     name: "Users",
@@ -23,7 +28,22 @@ const items = [
     icon:
       "M20 6h-3V4a1 1 0 0 0-1-1h-8a1 1 0 0 0-1 1v2H4a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2zM9 5h6v1H9zm11 14H4V9h16z",
   },
-  { label: "Báo cáo", name: "Reports", icon: "M3 13h6v8H3zm12-6h6v14h-6zM9 3h6v18H9z" },
+  {
+    label: "Danh mục",
+    name: "Categories",
+    icon: "M3 5h8v6H3zm10 0h8v6h-8zM3 13h8v6H3zm10 0h8v6h-8z",
+  },
+  {
+    label: "Thành phố",
+    name: "Cities",
+    icon: "M12 2 3 7v15h6v-6h6v6h6V7z",
+  },
+  {
+    label: "Phiếu thanh toán",
+    name: "Payments",
+    icon:
+      "M3 10h18v8H3zm2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2zM7 6V4a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2h3a1 1 0 0 1 0 2H4a1 1 0 0 1 0-2z", // Icon ví hoặc thẻ
+  },
 ];
 
 const isActive = (name) => computed(() => route.name === name);

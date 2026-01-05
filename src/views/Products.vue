@@ -1,34 +1,43 @@
 <script setup>
-import { ref, onMounted, computed, reactive } from "vue";
+import { ref, onMounted, computed, reactive, watch } from "vue";
 import axios from "axios";
 import Cookies from "js-cookie";
 
 const products = ref([]);
 const loading = ref(true);
 const search = ref("");
-const selectedStatus = ref("ALL"); // ALL | PENDING_APPROVAL | APPROVED | AUCTION_CREATED | CANCELLED
 
-// Popup / gallery state
+const statusOptions = [
+  { label: "Chờ duyệt", value: "PENDING_APPROVAL" },
+  { label: "Đã duyệt", value: "APPROVED" },
+  { label: "Đã tạo phiên", value: "AUCTION_CREATED" },
+  { label: "Đã huỷ", value: "CANCELLED" },
+];
+const selectedStatuses = ref([]);
+
+const page = ref(0);
+const size = ref(12);
+const totalPages = ref(0);
+const totalElements = ref(0);
+
 const isPopupOpen = ref(false);
 const selectedProduct = ref(null);
 const galleryIndex = ref(0);
 
-// Image loading state keyed by product id (masp)
-const imgState = reactive({}); // values: 'loading' | 'loaded' | 'error'
-// Action loading state keyed by product id for approve/reject
+const imgState = reactive({});
 const actionLoading = reactive({});
+const coverLoaded = reactive({});
 
-// Base API
 const API = "http://localhost:8082/api";
 const getImageUrl = (tenanh) => `${API}/imgs/${tenanh}`;
 
-// Helpers for hinhAnh format compatibility
 function extractImageName(entry) {
   if (!entry) return null;
   if (typeof entry === "string") return entry;
   if (typeof entry === "object") return entry.tenanh || entry.url || null;
   return null;
 }
+
 function productImages(p) {
   if (!p || !Array.isArray(p.hinhAnh)) return [];
   return p.hinhAnh
@@ -36,6 +45,7 @@ function productImages(p) {
     .filter(Boolean)
     .map((name) => getImageUrl(name));
 }
+
 function firstProductImage(p) {
   const imgs = productImages(p);
   return imgs.length ? imgs[0] : null;
@@ -44,16 +54,40 @@ function firstProductImage(p) {
 const fetchProducts = async () => {
   loading.value = true;
   try {
-    const res = await axios.get(`${API}/products/find-all`);
-    products.value = res.data?.result || [];
-    // init image and action states
+    const params = {
+      page: page.value,
+      size: size.value,
+    };
+    if (selectedStatuses.value.length > 0) {
+      params.trangthai = selectedStatuses.value;
+    }
+    const res = await axios.get(`${API}/products/find-all`, {
+      params,
+      paramsSerializer: (params) =>
+        Object.entries(params)
+          .map(([k, v]) =>
+            Array.isArray(v)
+              ? v
+                  .map((item) => `${encodeURIComponent(k)}=${encodeURIComponent(item)}`)
+                  .join("&")
+              : `${encodeURIComponent(k)}=${encodeURIComponent(v)}`
+          )
+          .join("&"),
+    });
+    const result = res.data.result;
+    products.value = result.content || [];
+    totalPages.value = result.page.totalPages;
+    totalElements.value = result.page.totalElements;
     products.value.forEach((p) => {
       imgState[p.masp] = firstProductImage(p) ? "loading" : "error";
+      coverLoaded[p.masp] = false;
       actionLoading[p.masp] = false;
     });
   } catch (err) {
     console.error("Lỗi API sản phẩm:", err);
     products.value = [];
+    totalPages.value = 0;
+    totalElements.value = 0;
   } finally {
     loading.value = false;
   }
@@ -62,35 +96,24 @@ const fetchProducts = async () => {
 const fullName = (u) =>
   u ? `${u.ho || ""} ${u.tenlot || ""} ${u.ten || ""}`.trim() : "";
 
-const STATUS = {
-  PENDING_APPROVAL: "Chờ duyệt",
-  APPROVED: "Đã duyệt",
-  AUCTION_CREATED: "Đã tạo phiên",
-  CANCELLED: "Đã huỷ",
-};
-
-// Map product.trangthai text to internal keys (tolerant)
 function statusKey(trangthai) {
   if (!trangthai) return "OTHER";
-
   const map = {
     "Chờ duyệt": "PENDING_APPROVAL",
     "Đã duyệt": "APPROVED",
     "Đã tạo phiên": "AUCTION_CREATED",
     "Đã huỷ": "CANCELLED",
+    PENDING_APPROVAL: "PENDING_APPROVAL",
+    APPROVED: "APPROVED",
+    AUCTION_CREATED: "AUCTION_CREATED",
+    CANCELLED: "CANCELLED",
   };
-
   return map[trangthai] || "OTHER";
 }
 
 const filteredProducts = computed(() => {
   const q = (search.value || "").toLowerCase();
   return products.value.filter((p) => {
-    // Lọc theo trạng thái
-    if (selectedStatus.value !== "ALL") {
-      if (statusKey(p.trangthai) !== selectedStatus.value) return false;
-    }
-    // Search
     if (!q) return true;
     return (
       p.masp?.toLowerCase().includes(q) ||
@@ -102,24 +125,15 @@ const filteredProducts = computed(() => {
   });
 });
 
-const statusCounts = computed(() => {
-  const c = {
-    ALL: products.value.length,
-    PENDING_APPROVAL: 0,
-    APPROVED: 0,
-    AUCTION_CREATED: 0,
-    CANCELLED: 0,
-  };
+// Pagination actions
+const goToPage = (p) => {
+  if (p < 0 || p >= totalPages.value) return;
+  page.value = p;
+  fetchProducts();
+};
+const nextPage = () => goToPage(page.value + 1);
+const prevPage = () => goToPage(page.value - 1);
 
-  products.value.forEach((p) => {
-    const key = statusKey(p.trangthai);
-    if (c[key] !== undefined) c[key]++;
-  });
-
-  return c;
-});
-
-// Card actions
 function openPopup(p, startIndex = 0) {
   selectedProduct.value = p;
   galleryIndex.value = startIndex;
@@ -145,14 +159,15 @@ function nextImage() {
 
 function onImgLoad(masp) {
   imgState[masp] = "loaded";
+  coverLoaded[masp] = true;
 }
 function onImgError(masp) {
   imgState[masp] = "error";
+  coverLoaded[masp] = false;
 }
-const token = Cookies.get("jwt_token");
 
-// Approve / Reject actions
-// Thêm state cho modal chỉnh sửa
+const token = Cookies.get("jwt_admin_token");
+
 const isEditModalOpen = ref(false);
 const selectedProductForEdit = ref(null);
 const editedProduct = reactive({
@@ -177,7 +192,6 @@ function openEditModal(p) {
   isEditModalOpen.value = true;
 }
 
-// Cập nhật closeEditModal để reset
 function closeEditModal() {
   isEditModalOpen.value = false;
   selectedProductForEdit.value = null;
@@ -196,7 +210,7 @@ async function saveAndApproveProduct() {
   if (!masp) return;
   if (
     !confirm(
-      `Bạn chắc chắn muốn lưu thay đổi và duyệt sản phẩm "${editedProduct.tensp}" (${masp})?`
+      `Xác nhận lưu thay đổi và duyệt sản phẩm "${editedProduct.tensp}" (${masp})?`
     )
   )
     return;
@@ -207,7 +221,6 @@ async function saveAndApproveProduct() {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    // Cập nhật dữ liệu local
     Object.assign(selectedProductForEdit.value, editedProduct);
     selectedProductForEdit.value.trangthai = "Đã duyệt";
     const index = products.value.findIndex((p) => p.masp === masp);
@@ -224,7 +237,6 @@ async function saveAndApproveProduct() {
   }
 }
 
-// Thêm state cho modal reject
 const isRejectModalOpen = ref(false);
 const selectedProductForReject = ref(null);
 const rejectData = reactive({
@@ -260,9 +272,7 @@ async function submitReject() {
     await axios.put(`${API}/products/reject/${masp}`, rejectBody, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    // Cập nhật dữ liệu local
     selectedProductForReject.value.trangthai = "Đã huỷ";
-    // Cập nhật trong products array
     const index = products.value.findIndex((p) => p.masp === masp);
     if (index !== -1) {
       Object.assign(products.value[index], selectedProductForReject.value);
@@ -277,6 +287,17 @@ async function submitReject() {
   }
 }
 
+// Khi đổi filter trạng thái hoặc size → về trang 0 và fetch
+watch(selectedStatuses, () => {
+  page.value = 0;
+  fetchProducts();
+});
+watch(size, () => {
+  page.value = 0;
+  fetchProducts();
+});
+watch(page, fetchProducts);
+
 onMounted(fetchProducts);
 </script>
 
@@ -285,7 +306,32 @@ onMounted(fetchProducts);
     <!-- Header -->
     <div class="flex items-center justify-between mb-4">
       <h1 class="text-2xl font-semibold text-gray-800">Quản lý sản phẩm</h1>
+    </div>
 
+    <!-- Status filter bar -->
+    <div class="mb-4 flex flex-wrap items-center gap-2">
+      <label
+        v-for="opt in statusOptions"
+        :key="opt.value"
+        class="flex items-center gap-1 text-sm px-2 py-1 border rounded"
+      >
+        <input
+          type="checkbox"
+          :value="opt.value"
+          v-model="selectedStatuses"
+          class="h-4 w-4"
+        />
+        <span>{{ opt.label }}</span>
+      </label>
+
+      <select
+        v-model.number="size"
+        class="px-2 py-2 border rounded-md text-sm bg-white shadow-sm ml-auto"
+      >
+        <option :value="6">6 / trang</option>
+        <option :value="12">12 / trang</option>
+        <option :value="24">24 / trang</option>
+      </select>
       <div class="flex items-center gap-3">
         <input
           v-model="search"
@@ -294,76 +340,10 @@ onMounted(fetchProducts);
           class="px-3 py-2 border rounded-md text-sm bg-white shadow-sm w-64 focus:border-blue-600 focus:ring-2 focus:ring-blue-300"
         />
       </div>
-    </div>
-
-    <!-- Status filter bar -->
-    <div class="mb-4">
-      <div class="flex flex-wrap gap-2 items-center">
-        <button
-          @click="selectedStatus = 'ALL'"
-          :class="
-            selectedStatus === 'ALL'
-              ? 'bg-sky-600 text-white'
-              : 'bg-gray-100 text-slate-700'
-          "
-          class="px-3 py-1.5 rounded-full text-sm font-medium transition"
-        >
-          Tất cả ({{ statusCounts.ALL }})
-        </button>
-
-        <button
-          @click="selectedStatus = 'PENDING_APPROVAL'"
-          :class="
-            selectedStatus === 'PENDING_APPROVAL'
-              ? 'bg-amber-500 text-white'
-              : 'bg-amber-50 text-amber-700'
-          "
-          class="px-3 py-1.5 rounded-full text-sm font-medium transition"
-        >
-          Chờ duyệt ({{ statusCounts.PENDING_APPROVAL }})
-        </button>
-
-        <button
-          @click="selectedStatus = 'APPROVED'"
-          :class="
-            selectedStatus === 'APPROVED'
-              ? 'bg-green-600 text-white'
-              : 'bg-green-50 text-green-700'
-          "
-          class="px-3 py-1.5 rounded-full text-sm font-medium transition"
-        >
-          Đã duyệt ({{ statusCounts.APPROVED }})
-        </button>
-
-        <button
-          @click="selectedStatus = 'AUCTION_CREATED'"
-          :class="
-            selectedStatus === 'AUCTION_CREATED'
-              ? 'bg-indigo-600 text-white'
-              : 'bg-indigo-50 text-indigo-700'
-          "
-          class="px-3 py-1.5 rounded-full text-sm font-medium transition"
-        >
-          Đã tạo phiên ({{ statusCounts.AUCTION_CREATED }})
-        </button>
-
-        <button
-          @click="selectedStatus = 'CANCELLED'"
-          :class="
-            selectedStatus === 'CANCELLED'
-              ? 'bg-red-600 text-white'
-              : 'bg-red-50 text-red-700'
-          "
-          class="px-3 py-1.5 rounded-full text-sm font-medium transition"
-        >
-          Đã huỷ ({{ statusCounts.CANCELLED }})
-        </button>
-
-        <div class="ml-auto text-sm text-gray-500">
-          Hiển thị:
-          <span class="font-medium text-gray-700">{{ filteredProducts.length }}</span> sản
-          phẩm
-        </div>
+      <div class="text-sm text-gray-500">
+        Hiển thị:
+        <span class="font-medium text-gray-700">{{ filteredProducts.length }}</span> /
+        {{ totalElements }} sản phẩm
       </div>
     </div>
 
@@ -389,7 +369,6 @@ onMounted(fetchProducts);
               <div
                 class="h-44 bg-gray-50 overflow-hidden flex items-center justify-center"
               >
-                <!-- image or placeholder -->
                 <div class="w-full h-full relative">
                   <div
                     v-if="imgState[p.masp] !== 'loaded'"
@@ -417,13 +396,24 @@ onMounted(fetchProducts);
                   />
 
                   <div
-                    v-if="imgState[p.masp] === 'error'"
-                    class="w-full h-full flex items-center justify-center text-gray-400"
+                    v-if="!coverLoaded[p.masp]"
+                    class="absolute inset-0 flex items-center justify-center bg-gray-100 text-gray-400"
                   >
-                    Không có ảnh
+                    <div v-if="imgState[p.masp] === 'error'">Không có ảnh</div>
+                    <div v-else class="animate-pulse flex items-center gap-2">
+                      <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none">
+                        <path
+                          d="M3 3h18v18H3z"
+                          stroke="currentColor"
+                          stroke-width="1.2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                      <span>Đang tải ảnh...</span>
+                    </div>
                   </div>
 
-                  <!-- status badge -->
                   <div class="absolute left-3 top-3">
                     <span
                       class="px-2 py-1 text-xs rounded-full font-medium"
@@ -448,7 +438,7 @@ onMounted(fetchProducts);
 
             <div class="p-4 flex flex-col gap-2">
               <div class="flex items-start justify-between gap-2">
-                <h3 class="font-semibold text-gray-800 text-sm line-clamp-2">
+                <h3 class="font-semibold text-gray-800 text-base line-clamp-2">
                   {{ p.tensp }}
                 </h3>
                 <div class="text-xs text-gray-500">{{ p.masp }}</div>
@@ -497,13 +487,41 @@ onMounted(fetchProducts);
                     <span v-else>Huỷ</span>
                   </button>
                 </template>
-                <div class="ml-auto text-xs text-gray-400">
-                  SP: {{ p.tinhtrangsp || "-" }}
-                </div>
               </div>
             </div>
           </article>
         </div>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="flex items-center justify-center mt-4 text-sm">
+      <div class="flex items-center gap-1">
+        <button
+          @click="prevPage"
+          :disabled="page === 0"
+          class="px-3 py-1 border rounded disabled:opacity-40"
+        >
+          ‹
+        </button>
+
+        <button
+          v-for="p in totalPages"
+          :key="p"
+          @click="goToPage(p - 1)"
+          class="px-3 py-1 border rounded"
+          :class="page === p - 1 ? 'bg-blue-600 text-white' : ''"
+        >
+          {{ p }}
+        </button>
+
+        <button
+          @click="nextPage"
+          :disabled="page >= totalPages - 1"
+          class="px-3 py-1 border rounded disabled:opacity-40"
+        >
+          ›
+        </button>
       </div>
     </div>
 
@@ -515,7 +533,6 @@ onMounted(fetchProducts);
       <div
         class="bg-white rounded-xl w-full max-w-4xl shadow-xl overflow-hidden grid grid-cols-1 md:grid-cols-3"
       >
-        <!-- Gallery column -->
         <div class="md:col-span-1 md:order-1 p-4 flex flex-col items-center gap-3">
           <div class="relative w-full">
             <div
@@ -530,8 +547,6 @@ onMounted(fetchProducts);
               />
               <div v-else class="text-gray-400">Không có ảnh</div>
             </div>
-
-            <!-- nav arrows -->
             <button
               v-if="selectedProduct && productImages(selectedProduct).length > 1"
               @click="prevImage"
@@ -550,7 +565,6 @@ onMounted(fetchProducts);
             </button>
           </div>
 
-          <!-- thumbnails -->
           <div
             v-if="selectedProduct && productImages(selectedProduct).length"
             class="w-full grid grid-cols-5 gap-2 mt-3"
@@ -569,7 +583,6 @@ onMounted(fetchProducts);
           </div>
         </div>
 
-        <!-- Details column -->
         <div class="col-span-2 p-5 md:order-2">
           <div class="flex items-start justify-between gap-4">
             <div>
@@ -579,9 +592,9 @@ onMounted(fetchProducts);
               <div class="text-sm text-gray-500 mt-1">{{ selectedProduct?.masp }}</div>
               <div class="mt-3 text-sm text-gray-600">
                 Người bán:
-                <span class="font-medium text-gray-800">{{
-                  fullName(selectedProduct?.taiKhoanNguoiBan)
-                }}</span>
+                <span class="font-medium text-gray-800">
+                  {{ fullName(selectedProduct?.taiKhoanNguoiBan) }}
+                </span>
                 <span class="text-gray-400"> • </span>
                 <span>{{ selectedProduct?.taiKhoanNguoiBan?.email }}</span>
               </div>
@@ -627,6 +640,7 @@ onMounted(fetchProducts);
         </div>
       </div>
     </div>
+
     <!-- Modal duyệt sản phẩm -->
     <div
       v-if="isEditModalOpen"
@@ -639,7 +653,6 @@ onMounted(fetchProducts);
         </h3>
 
         <form @submit.prevent="saveAndApproveProduct" class="space-y-4">
-          <!-- Các trường form giữ nguyên như trước -->
           <div>
             <label class="block text-sm font-medium text-gray-700">Tên sản phẩm</label>
             <input
@@ -675,27 +688,6 @@ onMounted(fetchProducts);
               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Tiêu đề</label>
-            <input
-              v-model="editedProduct.tieude"
-              type="text"
-              class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-              placeholder="Ví dụ: Sản phẩm không hợp lệ"
-            />
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Nội dung</label>
-            <textarea
-              v-model="editedProduct.noidung"
-              rows="4"
-              class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-              placeholder="Ví dụ: Sản phẩm vi phạm quy định của chúng tôi về..."
-            ></textarea>
-          </div>
           <div class="flex justify-end gap-3">
             <button
               type="button"
@@ -718,6 +710,7 @@ onMounted(fetchProducts);
         </form>
       </div>
     </div>
+
     <!-- Modal huỷ sản phẩm -->
     <div
       v-if="isRejectModalOpen"
@@ -777,12 +770,3 @@ onMounted(fetchProducts);
     </div>
   </div>
 </template>
-
-<style scoped>
-.card .line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-</style>

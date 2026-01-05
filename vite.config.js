@@ -10,11 +10,14 @@ export default defineConfig({
   plugins: [
     vue(),
     vueDevTools(),
-    tailwindcss(),
+    tailwindcss(), // 👈 kích hoạt TailwindCSS v4
   ],
+  define: {
+    global: 'window', // 👈 fix lỗi "global is not defined"
+  },
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
 })

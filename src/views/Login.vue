@@ -30,7 +30,7 @@ const submitLogin = async () => {
 
     if (res.data.code === 200) {
       const token = res.data.result;
-      Cookies.set("jwt_token", token);
+      Cookies.set("jwt_admin_token", token);
       auth.setToken(token);
       await auth.fetchUser();
       router.push({ name: "Home" });
@@ -38,7 +38,7 @@ const submitLogin = async () => {
       error.value = res.data.message || "Đăng nhập thất bại.";
     }
   } catch (e) {
-    console.error("Login error:", e); // Add this
+    console.error("Login error:", e);
     error.value = "Không thể kết nối.";
   } finally {
     loading.value = false;
@@ -51,7 +51,6 @@ const submitLogin = async () => {
     <div
       class="bg-white w-full max-w-md rounded-2xl p-8 shadow-xl relative overflow-hidden"
     >
-      <!-- Vòng tròn mờ góc phải -->
       <div
         class="absolute -top-10 -right-10 w-40 h-40 bg-blue-100 rounded-full opacity-40"
       ></div>

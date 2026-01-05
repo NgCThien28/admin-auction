@@ -5,7 +5,7 @@ import Cookies from "js-cookie";
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null,
-    token: Cookies.get('jwt_token') || null,
+    token: Cookies.get('jwt_admin_token') || null,
     loading: false,
   }),
 
@@ -33,7 +33,7 @@ export const useAuthStore = defineStore('auth', {
     },
     setToken(token) {
       this.token = token
-      Cookies.set('jwt_token', token, {
+      Cookies.set('jwt_admin_token', token, {
         expires: 7,
         secure: false,
         sameSite: 'Lax',
@@ -42,12 +42,12 @@ export const useAuthStore = defineStore('auth', {
     logout() {
       this.user = null
       this.token = null
-      Cookies.remove('jwt_token')
+      Cookies.remove('jwt_admin_token')
     },
     
     // 🔹 Load lại user khi reload trang
     async loadUserFromCookies() {
-      const token = Cookies.get('jwt_token')
+      const token = Cookies.get('jwt_admin_token')
       if (token && !this.user) {
         this.token = token
         await this.fetchUser()

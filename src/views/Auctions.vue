@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed, reactive } from "vue";
+import { ref, onMounted, computed, reactive, watch } from "vue";
 import axios from "axios";
 import Cookies from "js-cookie";
 
@@ -7,29 +7,70 @@ const auctions = ref([]);
 const loading = ref(true);
 const search = ref("");
 
+// Filter status
+const statusOptions = [
+  { label: "Chờ duyệt", value: "PENDING_APPROVAL" },
+  { label: "Chưa bắt đầu", value: "NOT_STARTED" },
+  { label: "Đang diễn ra", value: "IN_PROGRESS" },
+  { label: "Thành công", value: "SUCCESS" },
+  { label: "Thất bại", value: "FAILED" },
+  { label: "Đã huỷ", value: "CANCELLED" },
+];
+const selectedStatuses = ref([]);
+const page = ref(0);
+const size = ref(10);
+const totalPages = ref(0);
+const totalElements = ref(0);
+
 const isPopupOpen = ref(false);
 const selectedAuction = ref(null);
+
+const token = Cookies.get("jwt_admin_token");
 
 const fetchAuctions = async () => {
   loading.value = true;
   try {
-    const res = await axios.get("http://localhost:8082/api/auctions/find-all");
-    auctions.value = res.data.result || [];
+    const params = {
+      page: page.value,
+      size: size.value,
+    };
+    if (selectedStatuses.value.length > 0) {
+      params.status = selectedStatuses.value;
+    }
+    const res = await axios.get("http://localhost:8082/api/auctions/find-by-status", {
+      params,
+      paramsSerializer: (params) =>
+        Object.entries(params)
+          .map(([k, v]) =>
+            Array.isArray(v)
+              ? v
+                  .map((item) => `${encodeURIComponent(k)}=${encodeURIComponent(item)}`)
+                  .join("&")
+              : `${encodeURIComponent(k)}=${encodeURIComponent(v)}`
+          )
+          .join("&"),
+    });
+    const pageData = res.data.result;
+    auctions.value = pageData.content || [];
+    totalPages.value = pageData.page.totalPages ?? 0;
+    totalElements.value = pageData.page.totalElements ?? 0;
   } catch (err) {
     console.error("Lỗi API phiên đấu giá:", err);
   } finally {
     loading.value = false;
   }
 };
-const token = Cookies.get("jwt_token");
 
+// Giữ lại search cục bộ trên trang hiện tại
 const filteredAuctions = computed(() => {
-  if (!search.value) return auctions.value;
-  return auctions.value.filter(
-    (a) =>
-      a.maphiendg.toLowerCase().includes(search.value.toLowerCase()) ||
-      a.sanPham.tensp.toLowerCase().includes(search.value.toLowerCase())
-  );
+  const q = (search.value || "").toLowerCase();
+  return auctions.value.filter((a) => {
+    if (!q) return true;
+    return (
+      a.maphiendg?.toLowerCase().includes(q) ||
+      a.sanPham?.tensp?.toLowerCase().includes(q)
+    );
+  });
 });
 
 const openPopup = (auction) => {
@@ -64,7 +105,6 @@ const rejectData = reactive({
   noidung: "",
 });
 
-// Thêm errors cho validation
 const errors = reactive({
   thoigianbd: "",
   thoigiankt: "",
@@ -75,7 +115,8 @@ const errors = reactive({
   tiencoc: "",
 });
 
-// Thêm hàm validateTimes (tham khảo auction-create.vue)
+const actionLoading = reactive({});
+
 const validateTimes = () => {
   const now = new Date();
   const startAuction = new Date(approveData.thoigianbd);
@@ -83,64 +124,104 @@ const validateTimes = () => {
   const startReg = new Date(approveData.thoigianbddk);
   const endReg = new Date(approveData.thoigianktdk);
 
-  // Reset errors
   Object.keys(errors).forEach((key) => (errors[key] = ""));
 
-  // Kiểm tra bắt đầu phiên
-  if (!approveData.thoigianbd) {
-    errors.thoigianbd = "Chưa chọn thời gian bắt đầu phiên.";
-  } else if (startAuction < now) {
-    errors.thoigianbd = "Bắt đầu phiên phải ở tương lai.";
-  }
+  if (!approveData.thoigianbd) errors.thoigianbd = "Chưa chọn thời gian bắt đầu phiên.";
+  else if (startAuction < now) errors.thoigianbd = "Bắt đầu phiên phải ở tương lai.";
 
-  // Kiểm tra kết thúc phiên
-  if (!approveData.thoigiankt) {
-    errors.thoigiankt = "Chưa chọn thời gian kết thúc phiên.";
-  } else if (endAuction <= startAuction) {
+  if (!approveData.thoigiankt) errors.thoigiankt = "Chưa chọn thời gian kết thúc phiên.";
+  else if (endAuction <= startAuction)
     errors.thoigiankt = "Kết thúc phiên phải > bắt đầu phiên.";
-  }
 
-  // Kiểm tra bắt đầu đăng ký
-  if (!approveData.thoigianbddk) {
+  if (!approveData.thoigianbddk)
     errors.thoigianbddk = "Chưa chọn thời gian bắt đầu đăng ký.";
-  } else if (startReg < now) {
-    errors.thoigianbddk = "Bắt đầu đăng ký phải ở tương lai.";
-  } else if (startReg >= startAuction) {
+  else if (startReg < now) errors.thoigianbddk = "Bắt đầu đăng ký phải ở tương lai.";
+  else if (startReg >= startAuction)
     errors.thoigianbddk = "Bắt đầu đăng ký phải < bắt đầu phiên.";
-  }
 
-  // Kiểm tra kết thúc đăng ký
-  if (!approveData.thoigianktdk) {
+  if (!approveData.thoigianktdk)
     errors.thoigianktdk = "Chưa chọn thời gian kết thúc đăng ký.";
-  } else if (endReg <= startReg) {
+  else if (endReg <= startReg)
     errors.thoigianktdk = "Kết thúc đăng ký phải > bắt đầu đăng ký.";
-  } else if (endReg >= startAuction) {
+  else if (endReg >= startAuction)
     errors.thoigianktdk = "Kết thúc đăng ký phải < bắt đầu phiên.";
-  }
 
-  // Kiểm tra số (nếu cần, thêm logic như auction-create)
-  if (!approveData.giakhoidiem || approveData.giakhoidiem <= 0) {
+  if (!approveData.giakhoidiem || approveData.giakhoidiem <= 0)
     errors.giakhoidiem = "Giá khởi điểm phải > 0.";
-  }
-  if (!approveData.buocgia || approveData.buocgia <= 0) {
+  if (!approveData.buocgia || approveData.buocgia <= 0)
     errors.buocgia = "Bước giá phải > 0.";
-  }
-  if (!approveData.tiencoc || approveData.tiencoc < 10000) {
+  if (!approveData.tiencoc || approveData.tiencoc < 10000)
     errors.tiencoc = "Tiền cọc phải ≥ 10.000.";
+};
+
+function validateNumberField(field) {
+  const val = approveData[field];
+  if (val === "" || val === null || val === undefined) {
+    errors[field] = "Vui lòng nhập số.";
+    return;
   }
+  const n = Number(val);
+  if (Number.isNaN(n)) {
+    errors[field] = "Giá trị không hợp lệ.";
+  } else if (field === "tiencoc" && n < 10000) {
+    errors[field] = "Tiền cọc phải ≥ 10.000.";
+  } else if (n <= 0) {
+    errors[field] = "Phải > 0.";
+  } else {
+    errors[field] = "";
+  }
+}
+
+watch(
+  () => approveData.thoigianbd,
+  () => validateTimes()
+);
+watch(
+  () => approveData.thoigiankt,
+  () => validateTimes()
+);
+watch(
+  () => approveData.thoigianbddk,
+  () => validateTimes()
+);
+watch(
+  () => approveData.thoigianktdk,
+  () => validateTimes()
+);
+watch(
+  () => approveData.giakhoidiem,
+  () => validateNumberField("giakhoidiem")
+);
+watch(
+  () => approveData.buocgia,
+  () => validateNumberField("buocgia")
+);
+watch(
+  () => approveData.tiencoc,
+  () => validateNumberField("tiencoc")
+);
+
+const toLocalInput = (isoString) => {
+  if (!isoString) return "";
+  const d = new Date(isoString);
+  const offset = d.getTimezoneOffset();
+  const local = new Date(d.getTime() - offset * 60000);
+  return local.toISOString().slice(0, 16); // YYYY-MM-DDTHH:mm
 };
 
 function openApproveModal(auction) {
+  closePopup();
   selectedAuctionForApprove.value = { ...auction };
   Object.assign(approveData, {
-    thoigianbd: auction.thoigianbd || "",
-    thoigiankt: auction.thoigiankt || "",
-    thoigianbddk: auction.thoigianbddk || "",
-    thoigianktdk: auction.thoigianktdk || "",
+    thoigianbd: toLocalInput(auction.thoigianbd),
+    thoigiankt: toLocalInput(auction.thoigiankt),
+    thoigianbddk: toLocalInput(auction.thoigianbddk),
+    thoigianktdk: toLocalInput(auction.thoigianktdk),
     giakhoidiem: auction.giakhoidiem || "",
     buocgia: auction.buocgia || "",
     tiencoc: auction.tiencoc || "",
   });
+  validateTimes();
   isApproveModalOpen.value = true;
 }
 
@@ -158,9 +239,8 @@ function closeApproveModal() {
   });
 }
 
-// Cập nhật submitApprove để merge dữ liệu và validate trước gửi
 async function submitApprove() {
-  validateTimes(); // Validate lại trước gửi
+  validateTimes();
   if (Object.values(errors).some((e) => e)) {
     alert(
       "Kiểm tra lại dữ liệu: " +
@@ -180,8 +260,8 @@ async function submitApprove() {
   )
     return;
 
+  actionLoading[id] = true;
   try {
-    // Format datetime (giữ nguyên)
     const formatDateTime = (isoString) => {
       if (!isoString) return "";
       const date = new Date(isoString);
@@ -215,14 +295,11 @@ async function submitApprove() {
       }
     );
 
-    // Cập nhật UI đầy đủ: merge dữ liệu từ response (nếu backend trả về result) hoặc optimistic update
     const index = auctions.value.findIndex((a) => a.maphiendg === id);
     if (index !== -1) {
       if (res.data.result) {
-        // Nếu backend trả về auction updated, merge
         Object.assign(auctions.value[index], res.data.result);
       } else {
-        // Optimistic update với dữ liệu đã gửi (format lại cho UI)
         Object.assign(auctions.value[index], {
           thoigianbd: body.thoigianbd,
           thoigiankt: body.thoigiankt,
@@ -231,34 +308,33 @@ async function submitApprove() {
           giakhoidiem: body.giakhoidiem,
           buocgia: body.buocgia,
           tiencoc: body.tiencoc,
-          trangthai: "Đã duyệt", // Hoặc từ response
+          trangthai: "Đã duyệt",
         });
       }
     }
     alert(res.data.message || "Duyệt thành công!");
     closeApproveModal();
-    closePopup(); // Đóng popup chi tiết nếu cần
   } catch (err) {
     console.error(err);
     alert("Duyệt thất bại!");
+  } finally {
+    actionLoading[id] = false;
   }
 }
 
-// Hàm mở modal reject
 function openRejectModal(auction) {
+  closePopup();
   selectedAuctionForReject.value = { ...auction };
   Object.assign(rejectData, { tieude: "", noidung: "" });
   isRejectModalOpen.value = true;
 }
 
-// Hàm đóng modal reject
 function closeRejectModal() {
   isRejectModalOpen.value = false;
   selectedAuctionForReject.value = null;
   Object.assign(rejectData, { tieude: "", noidung: "" });
 }
 
-// Hàm submit reject
 async function submitReject() {
   const id = selectedAuctionForReject.value.maphiendg;
   if (!id) return;
@@ -269,8 +345,9 @@ async function submitReject() {
   )
     return;
 
+  actionLoading[id] = true;
   try {
-    const body = { ...rejectData }; // JSON body với tieude và noidung
+    const body = { ...rejectData };
     const res = await axios.put(`http://localhost:8082/api/auctions/reject/${id}`, body, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -278,35 +355,71 @@ async function submitReject() {
       },
     });
 
-    // Cập nhật UI
     const index = auctions.value.findIndex((a) => a.maphiendg === id);
     if (index !== -1) {
       auctions.value[index].trangthai = res.data.result?.trangthai || "Đã từ chối";
     }
     alert(res.data.message || "Từ chối thành công!");
     closeRejectModal();
-    closePopup(); // Đóng popup chi tiết nếu cần
   } catch (err) {
     console.error(err);
     alert("Từ chối thất bại!");
+  } finally {
+    actionLoading[id] = false;
   }
 }
+
+watch(selectedStatuses, () => {
+  page.value = 0;
+  fetchAuctions();
+});
+watch(size, () => {
+  page.value = 0;
+  fetchAuctions();
+});
 
 onMounted(fetchAuctions);
 </script>
 
 <template>
   <div>
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-4">
+    <!-- Header + Filters -->
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
       <h1 class="text-xl font-semibold text-gray-800">Quản lý phiên đấu giá</h1>
 
-      <input
-        v-model="search"
-        type="text"
-        placeholder="Tìm kiếm phiên đấu giá..."
-        class="px-3 py-2 border rounded-md text-sm bg-white w-64 shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-300"
-      />
+      <div class="flex items-center gap-2">
+        <div class="flex flex-wrap gap-2">
+          <label
+            v-for="opt in statusOptions"
+            :key="opt.value"
+            class="flex items-center gap-1 text-sm px-2 py-1 border rounded"
+          >
+            <input
+              type="checkbox"
+              :value="opt.value"
+              v-model="selectedStatuses"
+              class="h-4 w-4"
+            />
+            <span>{{ opt.label }}</span>
+          </label>
+        </div>
+
+        <input
+          v-model="search"
+          type="text"
+          placeholder="Tìm kiếm phiên đấu giá..."
+          class="px-3 py-2 border rounded-md text-sm bg-white w-64 shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-300"
+        />
+
+        <select
+          v-model.number="size"
+          class="px-2 py-2 border rounded-md text-sm bg-white shadow-sm"
+        >
+          <option :value="5">5 / trang</option>
+          <option :value="10">10 / trang</option>
+          <option :value="20">20 / trang</option>
+        </select>
+      </div>
     </div>
 
     <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
@@ -314,11 +427,11 @@ onMounted(fetchAuctions);
       <table v-else class="w-full text-sm">
         <thead class="bg-gray-50 text-gray-600">
           <tr>
-            <th class="px-4 py-3 text-left font-medium">Mã phiên</th>
-            <th class="px-4 py-3 text-left font-medium">Sản phẩm</th>
-            <th class="px-4 py-3 text-left font-medium">Thời gian bắt đầu</th>
-            <th class="px-4 py-3 text-left font-medium">Thành phố</th>
-            <th class="px-4 py-3 text-left font-medium">Trạng thái</th>
+            <th class="px-4 py-3 text-center font-medium">Mã phiên</th>
+            <th class="px-4 py-3 text-center font-medium">Sản phẩm</th>
+            <th class="px-4 py-3 text-center font-medium">Thời gian bắt đầu</th>
+            <th class="px-4 py-3 text-center font-medium">Thành phố</th>
+            <th class="px-4 py-3 text-center font-medium">Trạng thái</th>
             <th class="px-4 py-3 text-center font-medium">Thao tác</th>
           </tr>
         </thead>
@@ -328,23 +441,23 @@ onMounted(fetchAuctions);
             :key="a.maphiendg"
             class="border-t hover:bg-gray-50"
           >
-            <td class="px-4 py-3 font-medium text-gray-800">
+            <td class="px-4 py-3 font-medium text-center">
               {{ a.maphiendg }}
             </td>
 
-            <td class="px-4 py-3">
+            <td class="px-4 py-3 font-medium text-center">
               {{ a.sanPham.tensp }}
             </td>
 
-            <td class="px-4 py-3">
+            <td class="px-4 py-3 font-medium text-center">
               {{ formatDate(a.thoigianbd) }}
             </td>
 
-            <td class="px-4 py-3">
+            <td class="px-4 py-3 font-medium text-center">
               {{ a.sanPham.thanhpho?.tentp }}
             </td>
 
-            <td class="px-4 py-3">
+            <td class="px-4 py-3 font-medium text-center">
               <span
                 class="px-2 py-1 text-xs rounded-full"
                 :class="
@@ -357,10 +470,30 @@ onMounted(fetchAuctions);
               </span>
             </td>
 
-            <td class="px-4 py-3 text-center">
+            <td class="px-4 py-3 text-center space-x-2">
+              <template v-if="a.trangthai === 'Chờ duyệt'">
+                <button
+                  @click.stop="openApproveModal(a)"
+                  :disabled="actionLoading[a.maphiendg]"
+                  class="px-3 py-1.5 text-xs rounded-md bg-green-600 text-white hover:bg-green-700 disabled:opacity-60"
+                >
+                  <span v-if="actionLoading[a.maphiendg]">Đang...</span>
+                  <span v-else>Duyệt</span>
+                </button>
+
+                <button
+                  @click.stop="openRejectModal(a)"
+                  :disabled="actionLoading[a.maphiendg]"
+                  class="px-3 py-1.5 text-xs rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-60"
+                >
+                  <span v-if="actionLoading[a.maphiendg]">Đang...</span>
+                  <span v-else>Từ chối</span>
+                </button>
+              </template>
+
               <button
-                @click="openPopup(a)"
-                class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                @click.stop="openPopup(a)"
+                class="px-3 py-1.5 text-xs rounded-md bg-blue-600 text-white hover:bg-blue-700"
               >
                 Chi tiết
               </button>
@@ -376,7 +509,36 @@ onMounted(fetchAuctions);
       </table>
     </div>
 
-    <!-- Popup chi tiết phiên đấu giá -->
+    <!-- Pagination -->
+    <div class="flex items-center justify-between mt-3 text-sm text-gray-600">
+      <div>
+        Trang {{ page + 1 }} / {{ totalPages || 1 }} — Tổng: {{ totalElements }} phiên
+      </div>
+      <div class="flex gap-2">
+        <button
+          class="px-3 py-1 border rounded disabled:opacity-50"
+          :disabled="page === 0"
+          @click="
+            page = Math.max(0, page - 1);
+            fetchAuctions();
+          "
+        >
+          Trước
+        </button>
+        <button
+          class="px-3 py-1 border rounded disabled:opacity-50"
+          :disabled="page + 1 >= totalPages"
+          @click="
+            page = page + 1;
+            fetchAuctions();
+          "
+        >
+          Sau
+        </button>
+      </div>
+    </div>
+
+    <!-- Popup -->
     <div
       v-if="isPopupOpen"
       class="fixed inset-0 bg-gray-200/80 flex items-center justify-center p-4"
@@ -386,7 +548,6 @@ onMounted(fetchAuctions);
 
         <div class="space-y-2 text-sm">
           <p><strong>Mã phiên:</strong> {{ selectedAuction.maphiendg }}</p>
-
           <p>
             <strong>Người bán:</strong>
             {{ selectedAuction.taiKhoanNguoiBan?.ho }}
@@ -394,11 +555,8 @@ onMounted(fetchAuctions);
             {{ selectedAuction.taiKhoanNguoiBan?.ten }}
             ({{ selectedAuction.taiKhoanNguoiBan?.email }})
           </p>
-
           <p><strong>Sản phẩm:</strong> {{ selectedAuction.sanPham?.tensp }}</p>
-
           <p><strong>Trạng thái:</strong> {{ selectedAuction.trangthai }}</p>
-
           <p>
             <strong>Thời gian bắt đầu:</strong>
             {{ formatDate(selectedAuction.thoigianbd) }}
@@ -415,7 +573,6 @@ onMounted(fetchAuctions);
             <strong>Thời gian kết thúc đăng ký:</strong>
             {{ formatDate(selectedAuction.thoigianktdk) }}
           </p>
-
           <p>
             <strong>Giá khởi điểm:</strong>
             {{ selectedAuction.giakhoidiem }}đ
@@ -455,191 +612,199 @@ onMounted(fetchAuctions);
             Đóng
           </button>
         </div>
+      </div>
+    </div>
 
-        <!-- Modal approve, thêm lỗi -->
-        <div
-          v-if="isApproveModalOpen"
-          class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-        >
-          <div class="bg-white rounded-xl w-full max-w-2xl shadow-xl overflow-hidden p-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-4">
-              Chỉnh sửa và duyệt phiên đấu giá: {{ selectedAuctionForApprove?.maphiendg }}
-            </h3>
+    <!-- MODAL APPROVE -->
+    <div
+      v-if="isApproveModalOpen"
+      class="fixed inset-0 z-60 flex items-center justify-center bg-black/50 p-4"
+    >
+      <div class="bg-white rounded-xl w-full max-w-3xl shadow-xl overflow-hidden p-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+          Chỉnh sửa và duyệt phiên đấu giá: {{ selectedAuctionForApprove?.maphiendg }}
+        </h3>
 
-            <form @submit.prevent="submitApprove" class="space-y-4">
-              <!-- Các trường với lỗi -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700"
-                  >Thời gian bắt đầu</label
-                >
-                <input
-                  v-model="approveData.thoigianbd"
-                  type="datetime-local"
-                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                  :class="{ 'border-red-500': errors.thoigianbd }"
-                />
-                <small v-if="errors.thoigianbd" class="text-red-500 text-sm mt-1">{{
-                  errors.thoigianbd
-                }}</small>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700"
-                  >Thời gian kết thúc</label
-                >
-                <input
-                  v-model="approveData.thoigiankt"
-                  type="datetime-local"
-                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                  :class="{ 'border-red-500': errors.thoigiankt }"
-                />
-                <small v-if="errors.thoigiankt" class="text-red-500 text-sm mt-1">{{
-                  errors.thoigiankt
-                }}</small>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700"
-                  >Thời gian bắt đầu đăng ký</label
-                >
-                <input
-                  v-model="approveData.thoigianbddk"
-                  type="datetime-local"
-                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                  :class="{ 'border-red-500': errors.thoigianbddk }"
-                />
-                <small v-if="errors.thoigianbddk" class="text-red-500 text-sm mt-1">{{
-                  errors.thoigianbddk
-                }}</small>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700"
-                  >Thời gian kết thúc đăng ký</label
-                >
-                <input
-                  v-model="approveData.thoigianktdk"
-                  type="datetime-local"
-                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                  :class="{ 'border-red-500': errors.thoigianktdk }"
-                />
-                <small v-if="errors.thoigianktdk" class="text-red-500 text-sm mt-1">{{
-                  errors.thoigianktdk
-                }}</small>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700"
-                  >Giá khởi điểm</label
-                >
-                <input
-                  v-model="approveData.giakhoidiem"
-                  type="number"
-                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                  :class="{ 'border-red-500': errors.giakhoidiem }"
-                />
-                <small v-if="errors.giakhoidiem" class="text-red-500 text-sm mt-1">{{
-                  errors.giakhoidiem
-                }}</small>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700">Bước giá</label>
-                <input
-                  v-model="approveData.buocgia"
-                  type="number"
-                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                  :class="{ 'border-red-500': errors.buocgia }"
-                />
-                <small v-if="errors.buocgia" class="text-red-500 text-sm mt-1">{{
-                  errors.buocgia
-                }}</small>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700">Tiền cọc</label>
-                <input
-                  v-model="approveData.tiencoc"
-                  type="number"
-                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                  :class="{ 'border-red-500': errors.tiencoc }"
-                />
-                <small v-if="errors.tiencoc" class="text-red-500 text-sm mt-1">{{
-                  errors.tiencoc
-                }}</small>
-              </div>
+        <form @submit.prevent="submitApprove" class="space-y-4">
+          <!-- Form 2 cột -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700"
+                >Thời gian bắt đầu</label
+              >
+              <input
+                v-model="approveData.thoigianbd"
+                type="datetime-local"
+                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+                :class="{ 'border-red-500': errors.thoigianbd }"
+              />
+              <small v-if="errors.thoigianbd" class="text-red-500 text-sm mt-1">{{
+                errors.thoigianbd
+              }}</small>
+            </div>
 
-              <div class="flex justify-end gap-3">
-                <button
-                  type="button"
-                  @click="closeApproveModal"
-                  class="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-700"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  class="px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700"
-                >
-                  Lưu và Duyệt
-                </button>
-              </div>
-            </form>
+            <div>
+              <label class="block text-sm font-medium text-gray-700"
+                >Thời gian kết thúc</label
+              >
+              <input
+                v-model="approveData.thoigiankt"
+                type="datetime-local"
+                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+                :class="{ 'border-red-500': errors.thoigiankt }"
+              />
+              <small v-if="errors.thoigiankt" class="text-red-500 text-sm mt-1">{{
+                errors.thoigiankt
+              }}</small>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700"
+                >Thời gian bắt đầu đăng ký</label
+              >
+              <input
+                v-model="approveData.thoigianbddk"
+                type="datetime-local"
+                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+                :class="{ 'border-red-500': errors.thoigianbddk }"
+              />
+              <small v-if="errors.thoigianbddk" class="text-red-500 text-sm mt-1">{{
+                errors.thoigianbddk
+              }}</small>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700"
+                >Thời gian kết thúc đăng ký</label
+              >
+              <input
+                v-model="approveData.thoigianktdk"
+                type="datetime-local"
+                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+                :class="{ 'border-red-500': errors.thoigianktdk }"
+              />
+              <small v-if="errors.thoigianktdk" class="text-red-500 text-sm mt-1">{{
+                errors.thoigianktdk
+              }}</small>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Giá khởi điểm</label>
+              <input
+                v-model="approveData.giakhoidiem"
+                type="number"
+                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+                :class="{ 'border-red-500': errors.giakhoidiem }"
+              />
+              <small v-if="errors.giakhoidiem" class="text-red-500 text-sm mt-1">{{
+                errors.giakhoidiem
+              }}</small>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Bước giá</label>
+              <input
+                v-model="approveData.buocgia"
+                type="number"
+                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+                :class="{ 'border-red-500': errors.buocgia }"
+              />
+              <small v-if="errors.buocgia" class="text-red-500 text-sm mt-1">{{
+                errors.buocgia
+              }}</small>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Tiền cọc</label>
+              <input
+                v-model="approveData.tiencoc"
+                type="number"
+                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+                :class="{ 'border-red-500': errors.tiencoc }"
+              />
+              <small v-if="errors.tiencoc" class="text-red-500 text-sm mt-1">{{
+                errors.tiencoc
+              }}</small>
+            </div>
           </div>
-        </div>
 
-        <!-- Thêm modal reject -->
-        <div
-          v-if="isRejectModalOpen"
-          class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-        >
-          <div class="bg-white rounded-xl w-full max-w-2xl shadow-xl overflow-hidden p-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-4">
-              Lý do từ chối phiên đấu giá: {{ selectedAuctionForReject?.maphiendg }}
-            </h3>
-
-            <form @submit.prevent="submitReject" class="space-y-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700">Tiêu đề</label>
-                <input
-                  v-model="rejectData.tieude"
-                  type="text"
-                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-                  required
-                  placeholder="Ví dụ: Phiên đấu giá không hợp lệ"
-                />
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700">Nội dung</label>
-                <textarea
-                  v-model="rejectData.noidung"
-                  rows="4"
-                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-                  required
-                  placeholder="Ví dụ: Lý do chi tiết tại sao từ chối."
-                ></textarea>
-              </div>
-
-              <div class="flex justify-end gap-3">
-                <button
-                  type="button"
-                  @click="closeRejectModal"
-                  class="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-700"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  class="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700"
-                >
-                  Gửi và Từ chối
-                </button>
-              </div>
-            </form>
+          <div class="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              @click="closeApproveModal"
+              class="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-700"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              :disabled="actionLoading[selectedAuctionForApprove?.maphiendg]"
+              class="px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700 disabled:opacity-60"
+            >
+              Lưu và Duyệt
+            </button>
           </div>
-        </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL REJECT -->
+    <div
+      v-if="isRejectModalOpen"
+      class="fixed inset-0 z-60 flex items-center justify-center bg-black/50 p-4"
+    >
+      <div class="bg-white rounded-xl w-full max-w-2xl shadow-xl overflow-hidden p-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+          Lý do từ chối phiên đấu giá: {{ selectedAuctionForReject?.maphiendg }}
+        </h3>
+
+        <form @submit.prevent="submitReject" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Tiêu đề</label>
+            <input
+              v-model="rejectData.tieude"
+              type="text"
+              class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+              required
+              placeholder="Ví dụ: Phiên đấu giá không hợp lệ"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Nội dung</label>
+            <textarea
+              v-model="rejectData.noidung"
+              rows="4"
+              class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+              required
+              placeholder="Ví dụ: Lý do chi tiết tại sao từ chối."
+            ></textarea>
+          </div>
+
+          <div class="flex justify-end gap-3">
+            <button
+              type="button"
+              @click="closeRejectModal"
+              class="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-700"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              :disabled="actionLoading[selectedAuctionForReject?.maphiendg]"
+              class="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-60"
+            >
+              Gửi và Từ chối
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
