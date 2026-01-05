@@ -290,63 +290,70 @@ onMounted(fetchUsers);
           v-else-if="selectedUser"
           class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm"
         >
-          <div class="bg-gray-50 rounded-lg p-3">
-            <span class="text-xs text-gray-500">Mã tài khoản</span>
-            <p class="text-sm font-medium text-gray-900">
+          <div class="bg-gray-50 rounded-lg p-3 min-w-0">
+            <span class="text-xs text-gray-800">Mã tài khoản</span>
+            <p class="text-sm font-medium text-gray-900 whitespace-normal break-words">
               {{ selectedUser.matk }}
             </p>
           </div>
 
-          <div class="bg-gray-50 rounded-lg p-3">
-            <span class="text-xs text-gray-500">Họ tên</span>
-            <p class="text-sm font-medium text-gray-900">
+          <div class="bg-gray-50 rounded-lg p-3 min-w-0">
+            <span class="text-xs text-gray-800">Họ tên</span>
+            <p class="text-sm font-medium text-gray-900 whitespace-normal break-words">
               {{ fullName(selectedUser) }}
             </p>
           </div>
 
-          <div class="bg-gray-50 rounded-lg p-3">
-            <span class="text-xs text-gray-500">Email</span>
-            <p class="text-sm font-medium text-gray-900">
+          <div class="bg-gray-50 rounded-lg p-3 min-w-0">
+            <span class="text-xs text-gray-800">Email</span>
+            <p class="text-sm font-medium text-gray-900 whitespace-normal break-words">
               {{ selectedUser.email }}
             </p>
           </div>
 
-          <div class="bg-gray-50 rounded-lg p-3">
-            <span class="text-xs text-gray-500">SĐT</span>
-            <p class="text-sm font-medium text-gray-900">
+          <div class="bg-gray-50 rounded-lg p-3 min-w-0">
+            <span class="text-xs text-gray-800">SĐT</span>
+            <p class="text-sm font-medium text-gray-900 whitespace-normal break-words">
               {{ selectedUser.sdt }}
             </p>
           </div>
 
-          <div class="bg-gray-50 rounded-lg p-3">
-            <span class="text-xs text-gray-500">Thành phố</span>
-            <p class="text-sm font-medium text-gray-900">
+          <div class="bg-gray-50 rounded-lg p-3 min-w-0">
+            <span class="text-xs text-gray-800">Thành phố</span>
+            <p class="text-sm font-medium text-gray-900 whitespace-normal break-words">
               {{ selectedUser.thanhPho?.tentp }}
             </p>
           </div>
 
-          <div class="bg-gray-50 rounded-lg p-3">
-            <span class="text-xs text-gray-500">Địa chỉ</span>
-            <p class="text-sm font-medium text-gray-900">
+          <div class="bg-gray-50 rounded-lg p-3 min-w-0">
+            <span class="text-xs text-gray-800">Địa chỉ</span>
+            <p class="text-sm font-medium text-gray-900 whitespace-normal break-words">
               {{ selectedUser.diachi }}
             </p>
           </div>
-          <div class="bg-gray-50 rounded-lg p-3">
-            <span class="text-xs text-gray-500">Địa chỉ giao hàng</span>
-            <p class="text-sm font-medium text-gray-900">
+          <div class="bg-gray-50 rounded-lg p-3 min-w-0">
+            <span class="text-xs text-gray-800">Địa chỉ giao hàng</span>
+            <p class="text-sm font-medium text-gray-900 whitespace-normal break-words">
               {{ selectedUser.diachigiaohang }}
             </p>
           </div>
-          <div class="bg-gray-50 rounded-lg p-3">
-            <span class="text-xs text-gray-500">Trạng thái đăng nhập</span>
-            <p class="text-sm font-medium text-gray-900">
+
+          <div class="bg-gray-50 rounded-lg p-3 min-w-0">
+            <span class="text-xs text-gray-800">Trạng thái đăng nhập</span>
+            <p class="text-sm font-medium text-gray-900 whitespace-normal break-words">
               {{ selectedUser.trangthaidangnhap }}
             </p>
           </div>
-          <div class="bg-gray-50 rounded-lg p-3">
-            <span class="text-xs text-gray-500">Trạng thái xác thực</span>
-            <p class="text-sm font-medium text-gray-900">
+          <div class="bg-gray-50 rounded-lg p-3 min-w-0">
+            <span class="text-xs text-gray-800">Trạng thái xác thực</span>
+            <p class="text-sm font-medium text-gray-900 whitespace-normal break-words">
               {{ selectedUser.xacthuctaikhoan }}
+            </p>
+          </div>
+          <div class="bg-gray-50 rounded-lg p-3 min-w-0">
+            <span class="text-xs text-gray-800">Trạng thái xác thực căn cước</span>
+            <p class="text-sm font-medium text-gray-900 whitespace-normal break-words">
+              {{ selectedUser.xacthuckyc }}
             </p>
           </div>
         </div>

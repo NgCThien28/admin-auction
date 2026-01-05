@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { useRoute } from "vue-router";
 
 const route = useRoute();
@@ -38,15 +38,28 @@ const items = [
     name: "Cities",
     icon: "M12 2 3 7v15h6v-6h6v6h6V7z",
   },
+];
+
+// Dropdown state cho "Báo cáo"
+const reportOpen = ref(false);
+
+const reportItems = [
   {
     label: "Phiếu thanh toán",
     name: "Payments",
-    icon:
-      "M3 10h18v8H3zm2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2zM7 6V4a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2h3a1 1 0 0 1 0 2H4a1 1 0 0 1 0-2z", // Icon ví hoặc thẻ
+  },
+  {
+    label: "Phiếu tiền cọc",
+    name: "Deposits", // đổi thành route name thật của mày nếu khác
   },
 ];
 
 const isActive = (name) => computed(() => route.name === name);
+const isReportActive = computed(() => reportItems.some((x) => x.name === route.name));
+
+const toggleReport = () => {
+  reportOpen.value = !reportOpen.value;
+};
 </script>
 
 <template>
@@ -65,7 +78,9 @@ const isActive = (name) => computed(() => route.name === name);
       >
         Thông tin chung
       </h3>
+
       <ul class="space-y-1">
+        <!-- Các mục thường -->
         <li v-for="it in items" :key="it.name">
           <router-link :to="{ name: it.name }" custom v-slot="{ href, navigate }">
             <a
@@ -89,6 +104,67 @@ const isActive = (name) => computed(() => route.name === name);
               <span>{{ it.label }}</span>
             </a>
           </router-link>
+        </li>
+
+        <!-- Báo cáo (Dropdown) -->
+        <li>
+          <button
+            type="button"
+            @click="toggleReport"
+            class="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-md text-sm"
+            :class="
+              isReportActive
+                ? 'bg-blue-50 text-blue-700 font-medium border border-blue-200'
+                : 'text-gray-700 hover:bg-gray-50'
+            "
+          >
+            <div class="flex items-center gap-3">
+              <svg
+                class="h-5 w-5"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <!-- Icon "báo cáo" kiểu chart -->
+                <path d="M4 19h16v2H4zM6 17V9h2v8H6zm5 0V5h2v12h-2zm5 0v-6h2v6h-2z" />
+              </svg>
+              <span>Báo cáo</span>
+            </div>
+
+            <svg
+              class="h-4 w-4 transition-transform"
+              :class="reportOpen ? 'rotate-180' : ''"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08Z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </button>
+
+          <ul v-show="reportOpen" class="mt-1 ml-6 space-y-1">
+            <li v-for="r in reportItems" :key="r.name">
+              <router-link :to="{ name: r.name }" custom v-slot="{ href, navigate }">
+                <a
+                  :href="href"
+                  @click.prevent="navigate()"
+                  class="flex items-center gap-2 px-3 py-2 rounded-md text-sm"
+                  :class="
+                    isActive(r.name).value
+                      ? 'bg-blue-50 text-blue-700 font-medium border border-blue-200'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  "
+                >
+                  <span class="h-1.5 w-1.5 rounded-full bg-current opacity-60" />
+                  <span>{{ r.label }}</span>
+                </a>
+              </router-link>
+            </li>
+          </ul>
         </li>
       </ul>
     </nav>

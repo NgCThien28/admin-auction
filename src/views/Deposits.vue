@@ -5,7 +5,7 @@ import Cookies from "js-cookie";
 
 /* ===== State ===== */
 const loading = ref(false);
-const paymentsRaw = ref([]);
+const depositsRaw = ref([]);
 
 const fromDate = ref("");
 const toDate = ref("");
@@ -44,32 +44,35 @@ const toDateOnlyTime = (dateStr) => {
 
 const badgeClass = (s) => {
   if (s === "Đã thanh toán") return "bg-emerald-50 text-emerald-700 border-emerald-200";
+  if (s === "Đã hoàn tiền" || s === "Hoàn tiền")
+    return "bg-sky-50 text-sky-700 border-sky-200";
   if (s === "Chưa thanh toán") return "bg-amber-50 text-amber-700 border-amber-200";
+  if (s === "Mất cọc") return "bg-rose-50 text-rose-700 border-rose-200";
   if (s === "Bị hủy" || s === "Đã huỷ" || s === "Hủy")
     return "bg-rose-50 text-rose-700 border-rose-200";
   return "bg-slate-50 text-slate-700 border-slate-200";
 };
 
 /* ===== API ===== */
-const fetchPayments = async () => {
+const fetchDeposits = async () => {
   loading.value = true;
   try {
-    const res = await axios.get("http://localhost:8082/api/payments/find-all", {
+    const res = await axios.get("http://localhost:8082/api/deposit-payments/find-all", {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
-    paymentsRaw.value = Array.isArray(res.data?.result) ? res.data.result : [];
+    depositsRaw.value = Array.isArray(res.data?.result) ? res.data.result : [];
   } catch (err) {
-    console.error("Lỗi API payments:", err);
-    paymentsRaw.value = [];
+    console.error("Lỗi API deposit-payments:", err);
+    depositsRaw.value = [];
   } finally {
     loading.value = false;
   }
 };
 
 const rows = computed(() => {
-  return (paymentsRaw.value || []).map((p, idx) => ({
+  return (depositsRaw.value || []).map((p, idx) => ({
     stt: idx + 1,
-    matt: p.matt,
+    matc: p.matc,
     thoigianthanhtoan: p.thoigianthanhtoan,
     hanthanhtoan: p.hanthanhtoan,
     sotien: p.sotien,
@@ -78,7 +81,6 @@ const rows = computed(() => {
   }));
 });
 
-/* Lọc theo form (từ ngày / đến ngày / trạng thái) */
 const filteredRows = computed(() => {
   const f = parseYmdToTime(fromDate.value);
   const t = parseYmdToTime(toDate.value);
@@ -86,6 +88,7 @@ const filteredRows = computed(() => {
   return rows.value.filter((r) => {
     if (status.value !== "ALL" && r.trangthai !== status.value) return false;
 
+    // Lọc theo NGÀY THANH TOÁN
     const created = toDateOnlyTime(r.thoigianthanhtoan);
     if (created === null) return true;
 
@@ -96,7 +99,7 @@ const filteredRows = computed(() => {
 });
 
 const onSearch = async () => {
-  await fetchPayments();
+  await fetchDeposits();
 };
 
 const exportExcel = async () => {
@@ -109,15 +112,17 @@ const exportExcel = async () => {
 
     if (status.value && status.value !== "ALL") params.status = status.value;
 
-    const res = await axios.get("http://localhost:8082/api/payments/export-excel", {
-      params,
-      responseType: "blob",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const res = await axios.get(
+      "http://localhost:8082/api/deposit-payments/export-excel",
+      {
+        params,
+        responseType: "blob",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      }
+    );
 
-    // Lấy filename từ header nếu có
     const disposition = res.headers?.["content-disposition"] || "";
-    let filename = "thongke.xlsx";
+    let filename = "tiencoc.xlsx";
     const match = disposition.match(/filename=([^;]+)/i);
     if (match?.[1]) filename = match[1].trim().replaceAll('"', "");
 
@@ -141,15 +146,13 @@ const exportExcel = async () => {
   }
 };
 
-onMounted(fetchPayments);
+onMounted(fetchDeposits);
 </script>
 
 <template>
   <div class="bg-white border border-slate-200 rounded-sm">
     <div class="px-4 py-3 border-b border-slate-200">
-      <h1 class="text-lg font-semibold text-blue-700">
-        Báo cáo chi tiết phiếu thanh toán
-      </h1>
+      <h1 class="text-lg font-semibold text-blue-700">Báo cáo chi tiết phiếu tiền cọc</h1>
     </div>
 
     <div class="px-4 py-4">
@@ -181,6 +184,8 @@ onMounted(fetchPayments);
             <option value="ALL">Tất cả</option>
             <option value="Đã thanh toán">Đã thanh toán</option>
             <option value="Chưa thanh toán">Chưa thanh toán</option>
+            <option value="Đã hoàn tiền">Đã hoàn tiền</option>
+            <option value="Mất cọc">Mất cọc</option>
             <option value="Bị hủy">Bị hủy</option>
           </select>
         </div>
@@ -234,10 +239,10 @@ onMounted(fetchPayments);
             <tbody>
               <tr
                 v-for="r in filteredRows"
-                :key="r.matt"
+                :key="r.matc"
                 class="border-t border-slate-200 hover:bg-slate-50"
               >
-                <td class="px-4 py-3 font-medium">{{ r.matt }}</td>
+                <td class="px-4 py-3 font-medium">{{ r.matc }}</td>
                 <td class="px-4 py-3">{{ formatDateTime(r.thoigianthanhtoan) }}</td>
                 <td class="px-4 py-3">{{ formatDateTime(r.hanthanhtoan) }}</td>
                 <td class="px-4 py-3">{{ formatMoney(r.sotien) }}</td>

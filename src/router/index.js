@@ -6,7 +6,7 @@ const Admin = () => import('../layouts/Admin.vue')
 const Home = () => import('../views/Home.vue')
 const Users = () => import('../views/Users.vue')
 const Auctions = () => import('../views/Auctions.vue')
-const Reports = () => import('../views/Reports.vue')
+const Deposits = () => import('../views/Deposits.vue')
 const Products = () => import('../views/Products.vue')
 const Payments = () => import('../views/Payments.vue')
 const Categories = () => import('../views/Categories.vue')
@@ -25,9 +25,9 @@ const router = createRouter({
         { path: '', name: 'Home', component: Home, meta: { requiresAuth: true } },
         { path: 'users', name: 'Users', component: Users, meta: { requiresAuth: true } },
         { path: 'auctions', name: 'Auctions', component: Auctions, meta: { requiresAuth: true } },
-        { path: 'reports', name: 'Reports', component: Reports, meta: { requiresAuth: true } },
         { path: 'products', name: 'Products', component: Products, meta: { requiresAuth: true } },
         { path: 'payments', name: 'Payments', component: Payments, meta: { requiresAuth: true } },
+        { path: 'deposits', name: 'Deposits', component: Deposits, meta: { requiresAuth: true } },
         { path: 'categories', name: 'Categories', component: Categories, meta: { requiresAuth: true } },
         { path: 'cities', name: 'Cities', component: Cities, meta: { requiresAuth: true } },
         { path: 'auction-room/:id', name: 'AuctionRoom', component: AuctionRoom, meta: { requiresAuth: true } },

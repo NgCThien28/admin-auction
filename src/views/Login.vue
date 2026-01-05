@@ -38,8 +38,8 @@ const submitLogin = async () => {
       error.value = res.data.message || "Đăng nhập thất bại.";
     }
   } catch (e) {
-    console.error("Login error:", e);
-    error.value = "Không thể kết nối.";
+    console.error("Lỗi đăng nhập", e);
+    error.value = e.response?.data?.message;
   } finally {
     loading.value = false;
   }
@@ -114,7 +114,6 @@ const submitLogin = async () => {
         <!-- Links -->
         <div class="flex justify-between text-sm text-gray-600 mt-1">
           <a href="#" class="hover:underline">Quên mật khẩu?</a>
-          <a href="/register" class="hover:underline text-blue-600">Đăng ký</a>
         </div>
       </form>
 

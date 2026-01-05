@@ -1,8 +1,9 @@
 <script setup>
 import { ref, onMounted, computed, reactive, watch } from "vue";
+import { useRouter } from "vue-router";
 import axios from "axios";
 import Cookies from "js-cookie";
-
+const router = useRouter();
 const auctions = ref([]);
 const loading = ref(true);
 const search = ref("");
@@ -369,6 +370,12 @@ async function submitReject() {
   }
 }
 
+const goToAuctionRoom = (auction) => {
+  const id = auction?.maphiendg;
+  if (!id) return;
+  router.push({ name: "AuctionRoom", params: { id } });
+};
+
 watch(selectedStatuses, () => {
   page.value = 0;
   fetchAuctions();
@@ -492,6 +499,14 @@ onMounted(fetchAuctions);
               </template>
 
               <button
+                v-if="a.trangthai === 'Đang diễn ra'"
+                @click.stop="goToAuctionRoom(a)"
+                class="px-3 py-1.5 text-xs rounded-md bg-purple-600 text-white hover:bg-purple-700"
+              >
+                Truy cập phiên
+              </button>
+
+              <button
                 @click.stop="openPopup(a)"
                 class="px-3 py-1.5 text-xs rounded-md bg-blue-600 text-white hover:bg-blue-700"
               >
@@ -589,6 +604,13 @@ onMounted(fetchAuctions);
         </div>
 
         <div class="mt-5 flex justify-end gap-2">
+          <button
+            v-if="selectedAuction.trangthai === 'Đang diễn ra'"
+            @click="goToAuctionRoom(selectedAuction)"
+            class="px-4 py-2 rounded-md bg-purple-600 text-white hover:bg-purple-700"
+          >
+            Truy cập phiên
+          </button>
           <button
             v-if="selectedAuction.trangthai === 'Chờ duyệt'"
             @click="openApproveModal(selectedAuction)"

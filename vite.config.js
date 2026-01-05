@@ -10,10 +10,10 @@ export default defineConfig({
   plugins: [
     vue(),
     vueDevTools(),
-    tailwindcss(), // 👈 kích hoạt TailwindCSS v4
+    tailwindcss(),
   ],
   define: {
-    global: 'window', // 👈 fix lỗi "global is not defined"
+    global: 'window',
   },
   resolve: {
     alias: {
