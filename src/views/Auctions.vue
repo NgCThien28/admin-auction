@@ -100,6 +100,11 @@ const approveData = reactive({
   tiencoc: "",
 });
 
+// Formatted refs for price inputs
+const formattedGiakhoidiem = ref("");
+const formattedBuocgia = ref("");
+const formattedTiencoc = ref("");
+
 const isRejectModalOpen = ref(false);
 const selectedAuctionForReject = ref(null);
 const rejectData = reactive({
@@ -223,6 +228,10 @@ function openApproveModal(auction) {
     buocgia: auction.buocgia || "",
     tiencoc: auction.tiencoc || "",
   });
+  // Initialize formatted values
+  formattedGiakhoidiem.value = approveData.giakhoidiem ? new Intl.NumberFormat("vi-VN").format(approveData.giakhoidiem) : "";
+  formattedBuocgia.value = approveData.buocgia ? new Intl.NumberFormat("vi-VN").format(approveData.buocgia) : "";
+  formattedTiencoc.value = approveData.tiencoc ? new Intl.NumberFormat("vi-VN").format(approveData.tiencoc) : "";
   validateTimes();
   isApproveModalOpen.value = true;
 }
@@ -239,6 +248,9 @@ function closeApproveModal() {
     buocgia: "",
     tiencoc: "",
   });
+  formattedGiakhoidiem.value = "";
+  formattedBuocgia.value = "";
+  formattedTiencoc.value = "";
 }
 
 async function submitApprove() {
@@ -392,6 +404,19 @@ onMounted(fetchAuctions);
 const formatCurrency = (n) => {
   return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(n || 0);
 };
+
+// Hàm xử lý format giá (tái sử dụng từ product-management.vue)
+function onPriceInput(field, e) {
+  let val = e.target.value.replace(/[^\d]/g, ""); // Chỉ giữ số
+  approveData[field] = val ? Number(val) : null;
+  if (field === "giakhoidiem") {
+    formattedGiakhoidiem.value = val ? new Intl.NumberFormat("vi-VN").format(Number(val)) : "";
+  } else if (field === "buocgia") {
+    formattedBuocgia.value = val ? new Intl.NumberFormat("vi-VN").format(Number(val)) : "";
+  } else if (field === "tiencoc") {
+    formattedTiencoc.value = val ? new Intl.NumberFormat("vi-VN").format(Number(val)) : "";
+  }
+}
 </script>
 
 <template>
@@ -723,10 +748,12 @@ const formatCurrency = (n) => {
             <div>
               <label class="block text-sm font-medium text-gray-700">Giá khởi điểm</label>
               <input
-                v-model="approveData.giakhoidiem"
-                type="number"
+                v-model="formattedGiakhoidiem"
+                type="text"
                 class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
+                placeholder="Ví dụ: 1.000.000"
+                @input="onPriceInput('giakhoidiem', $event)"
                 :class="{ 'border-red-500': errors.giakhoidiem }"
               />
               <small v-if="errors.giakhoidiem" class="text-red-500 text-sm mt-1">{{
@@ -737,10 +764,12 @@ const formatCurrency = (n) => {
             <div>
               <label class="block text-sm font-medium text-gray-700">Bước giá</label>
               <input
-                v-model="approveData.buocgia"
-                type="number"
+                v-model="formattedBuocgia"
+                type="text"
                 class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
+                placeholder="Ví dụ: 100.000"
+                @input="onPriceInput('buocgia', $event)"
                 :class="{ 'border-red-500': errors.buocgia }"
               />
               <small v-if="errors.buocgia" class="text-red-500 text-sm mt-1">{{
@@ -751,10 +780,12 @@ const formatCurrency = (n) => {
             <div>
               <label class="block text-sm font-medium text-gray-700">Tiền cọc</label>
               <input
-                v-model="approveData.tiencoc"
-                type="number"
+                v-model="formattedTiencoc"
+                type="text"
                 class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
+                placeholder="Ví dụ: 500.000"
+                @input="onPriceInput('tiencoc', $event)"
                 :class="{ 'border-red-500': errors.tiencoc }"
               />
               <small v-if="errors.tiencoc" class="text-red-500 text-sm mt-1">{{

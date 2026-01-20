@@ -272,7 +272,7 @@ onMounted(fetchUsers);
       class="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center"
     >
       <div
-        class="bg-white w-[460px] rounded-xl border border-gray-200 shadow-xl rounded-2xl p-6"
+        class="bg-white w-[460px] rounded-xl border border-gray-200 shadow-xl p-6"
       >
         <div class="flex justify-between items-center mb-4 border-b pb-2">
           <h2 class="text-lg font-semibold text-gray-800">Thông tin người dùng</h2>
@@ -292,67 +292,67 @@ onMounted(fetchUsers);
         >
           <div class="bg-gray-50 rounded-lg p-3 min-w-0">
             <span class="text-xs text-gray-800">Mã tài khoản</span>
-            <p class="text-sm font-medium text-gray-900 whitespace-normal break-words">
+            <p class="text-sm font-medium text-gray-900 whitespace-normal wrap-break-word">
               {{ selectedUser.matk }}
             </p>
           </div>
 
           <div class="bg-gray-50 rounded-lg p-3 min-w-0">
             <span class="text-xs text-gray-800">Họ tên</span>
-            <p class="text-sm font-medium text-gray-900 whitespace-normal break-words">
+            <p class="text-sm font-medium text-gray-900 whitespace-normal wrap-break-word">
               {{ fullName(selectedUser) }}
             </p>
           </div>
 
           <div class="bg-gray-50 rounded-lg p-3 min-w-0">
             <span class="text-xs text-gray-800">Email</span>
-            <p class="text-sm font-medium text-gray-900 whitespace-normal break-words">
+            <p class="text-sm font-medium text-gray-900 whitespace-normal wrap-break-word">
               {{ selectedUser.email }}
             </p>
           </div>
 
           <div class="bg-gray-50 rounded-lg p-3 min-w-0">
             <span class="text-xs text-gray-800">SĐT</span>
-            <p class="text-sm font-medium text-gray-900 whitespace-normal break-words">
+            <p class="text-sm font-medium text-gray-900 whitespace-normal wrap-break-word">
               {{ selectedUser.sdt }}
             </p>
           </div>
 
           <div class="bg-gray-50 rounded-lg p-3 min-w-0">
             <span class="text-xs text-gray-800">Thành phố</span>
-            <p class="text-sm font-medium text-gray-900 whitespace-normal break-words">
+            <p class="text-sm font-medium text-gray-900 whitespace-normal wrap-break-word">
               {{ selectedUser.thanhPho?.tentp }}
             </p>
           </div>
 
           <div class="bg-gray-50 rounded-lg p-3 min-w-0">
             <span class="text-xs text-gray-800">Địa chỉ</span>
-            <p class="text-sm font-medium text-gray-900 whitespace-normal break-words">
+            <p class="text-sm font-medium text-gray-900 whitespace-normal wrap-break-word">
               {{ selectedUser.diachi }}
             </p>
           </div>
           <div class="bg-gray-50 rounded-lg p-3 min-w-0">
             <span class="text-xs text-gray-800">Địa chỉ giao hàng</span>
-            <p class="text-sm font-medium text-gray-900 whitespace-normal break-words">
+            <p class="text-sm font-medium text-gray-900 whitespace-normal wrap-break-word">
               {{ selectedUser.diachigiaohang }}
             </p>
           </div>
 
           <div class="bg-gray-50 rounded-lg p-3 min-w-0">
             <span class="text-xs text-gray-800">Trạng thái đăng nhập</span>
-            <p class="text-sm font-medium text-gray-900 whitespace-normal break-words">
+            <p class="text-sm font-medium text-gray-900 whitespace-normal wrap-break-word">
               {{ selectedUser.trangthaidangnhap }}
             </p>
           </div>
           <div class="bg-gray-50 rounded-lg p-3 min-w-0">
             <span class="text-xs text-gray-800">Trạng thái xác thực</span>
-            <p class="text-sm font-medium text-gray-900 whitespace-normal break-words">
+            <p class="text-sm font-medium text-gray-900 whitespace-normal wrap-break-word">
               {{ selectedUser.xacthuctaikhoan }}
             </p>
           </div>
           <div class="bg-gray-50 rounded-lg p-3 min-w-0">
             <span class="text-xs text-gray-800">Trạng thái xác thực căn cước</span>
-            <p class="text-sm font-medium text-gray-900 whitespace-normal break-words">
+            <p class="text-sm font-medium text-gray-900 whitespace-normal wrap-break-word">
               {{ selectedUser.xacthuckyc }}
             </p>
           </div>

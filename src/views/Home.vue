@@ -61,9 +61,12 @@ const commissionSum = computed(() =>
 );
 
 const stats = computed(() => [
-  { label: "Giao dịch thành công", value: `${successTotalCount.value} GD` },
-  { label: "Giao dịch lỗi", value: "0 VND" },
-  { label: "Giao dịch đang thực hiện", value: "0 VND" },
+  { label: "Giao dịch thành công", value: `${successTotalCount.value}` },
+  { label: "Doanh thu", value:  new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+      maximumFractionDigits: 0,
+    }).format(commissionSum.value), },
   {
     label: "Tổng",
     value: new Intl.NumberFormat("vi-VN", {
@@ -360,7 +363,7 @@ watch([from, to], () => {
     <!-- Top stats bar -->
     <section class="bg-blue-700">
       <div class="mx-auto max-w-6xl px-4">
-        <div class="grid grid-cols-2 md:grid-cols-4">
+        <div class="grid grid-cols-2 md:grid-cols-3">
           <div v-for="s in stats" :key="s.label" class="py-5 text-center text-white">
             <div class="text-2xl font-bold leading-none">{{ s.value }}</div>
             <div class="mt-1 text-sm text-white/90">{{ s.label }}</div>

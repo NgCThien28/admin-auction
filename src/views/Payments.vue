@@ -13,6 +13,17 @@ const status = ref("ALL");
 
 const token = Cookies.get("jwt_admin_token");
 
+// Modal states
+const showModal = ref(false);
+const selectedPayment = ref(null);
+
+// Cancel modal states
+const showCancelModal = ref(false);
+const cancelTitle = ref("");
+const cancelContent = ref("");
+const selectedPaymentForCancel = ref(null);
+const cancelLoading = ref(false);
+
 /* ===== Helpers ===== */
 const formatDateTime = (dateStr) => {
   if (!dateStr) return "—";
@@ -141,6 +152,61 @@ const exportExcel = async () => {
   }
 };
 
+// Modal functions
+const openDetail = (payment) => {
+  selectedPayment.value = payment;
+  showModal.value = true;
+};
+
+const closeModal = () => {
+  showModal.value = false;
+  selectedPayment.value = null;
+};
+
+// Cancel functions
+const openCancelModal = (payment) => {
+  selectedPaymentForCancel.value = payment;
+  cancelTitle.value = "";
+  cancelContent.value = "";
+  showCancelModal.value = true;
+};
+
+const closeCancelModal = () => {
+  showCancelModal.value = false;
+  selectedPaymentForCancel.value = null;
+  cancelTitle.value = "";
+  cancelContent.value = "";
+};
+
+const submitCancel = async () => {
+  if (!selectedPaymentForCancel.value || !cancelTitle.value.trim() || !cancelContent.value.trim()) {
+    alert("Vui lòng nhập đầy đủ tiêu đề và nội dung huỷ phiếu!");
+    return;
+  }
+
+  cancelLoading.value = true;
+  try {
+    await axios.put(
+      `http://localhost:8082/api/payments/cancel-payment/${selectedPaymentForCancel.value.matt}`,
+      {
+        tieude: cancelTitle.value.trim(),
+        noidung: cancelContent.value.trim(),
+      },
+      {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      }
+    );
+    alert("Huỷ phiếu thành công!");
+    closeCancelModal();
+    await fetchPayments(); // Refresh data
+  } catch (err) {
+    console.error("Lỗi huỷ phiếu:", err);
+    alert("Huỷ phiếu thất bại!");
+  } finally {
+    cancelLoading.value = false;
+  }
+};
+
 onMounted(fetchPayments);
 </script>
 
@@ -249,11 +315,19 @@ onMounted(fetchPayments);
                     {{ r.trangthai }}
                   </span>
                 </td>
-                <td class="px-4 py-3">
+                <td class="px-4 py-3 flex gap-2">
                   <button
+                    @click="openDetail(r._raw)"
                     class="h-8 px-3 rounded-sm bg-blue-700 text-white text-sm hover:bg-blue-800"
                   >
                     Chi tiết
+                  </button>
+                  <button
+                    v-if="r.trangthai === 'Chưa thanh toán'"
+                    @click="openCancelModal(r._raw)"
+                    class="h-8 px-3 rounded-sm bg-red-600 text-white text-sm hover:bg-red-700"
+                  >
+                    Huỷ phiếu
                   </button>
                 </td>
               </tr>
@@ -261,6 +335,115 @@ onMounted(fetchPayments);
           </table>
         </div>
       </template>
+    </div>
+
+    <!-- Modal Chi tiết phiếu thanh toán -->
+    <div
+      v-if="showModal"
+      class="fixed inset-0 bg-black/30 backdrop-blur-xs flex items-center justify-center z-50"
+      @click.self="closeModal"
+    >
+      <div class="bg-white rounded-lg shadow-lg max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
+        <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+          <h2 class="text-lg font-semibold text-slate-800">Chi tiết phiếu thanh toán</h2>
+          <button
+            @click="closeModal"
+            class="text-slate-400 hover:text-slate-600 text-xl"
+          >
+            &times;
+          </button>
+        </div>
+        <div v-if="selectedPayment" class="px-6 py-4 space-y-3">
+          <div class="grid grid-cols-[120px_1fr] gap-3">
+            <span class="text-sm font-medium text-slate-600">Mã phiếu:</span>
+            <span class="text-sm text-slate-800">{{ selectedPayment.matt }}</span>
+          </div>
+          <div class="grid grid-cols-[120px_1fr] gap-3">
+            <span class="text-sm font-medium text-slate-600">Ngày thanh toán:</span>
+            <span class="text-sm text-slate-800">{{ formatDateTime(selectedPayment.thoigianthanhtoan) }}</span>
+          </div>
+          <div class="grid grid-cols-[120px_1fr] gap-3">
+            <span class="text-sm font-medium text-slate-600">Hạn thanh toán:</span>
+            <span class="text-sm text-slate-800">{{ formatDateTime(selectedPayment.hanthanhtoan) }}</span>
+          </div>
+          <div class="grid grid-cols-[120px_1fr] gap-3">
+            <span class="text-sm font-medium text-slate-600">Số tiền:</span>
+            <span class="text-sm text-slate-800">{{ formatMoney(selectedPayment.sotien) }}</span>
+          </div>
+          <div class="grid grid-cols-[120px_1fr] gap-3">
+            <span class="text-sm font-medium text-slate-600">Trạng thái:</span>
+            <span
+              class="inline-flex items-center px-2 py-0.5 rounded-full border text-xs"
+              :class="badgeClass(selectedPayment.trangthai)"
+            >
+              {{ selectedPayment.trangthai }}
+            </span>
+          </div>
+          <!-- Thêm các field khác nếu có -->
+        </div>
+        <div class="px-6 py-4 border-t border-slate-200 flex justify-end">
+          <button
+            @click="closeModal"
+            class="h-9 px-4 rounded-sm bg-slate-600 text-white text-sm hover:bg-slate-700"
+          >
+            Đóng
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Huỷ phiếu thanh toán -->
+    <div
+      v-if="showCancelModal"
+      class="fixed inset-0 bg-black/30 backdrop-blur-xs flex items-center justify-center z-50"
+      @click.self="closeCancelModal"
+    >
+      <div class="bg-white rounded-lg shadow-lg max-w-lg w-full mx-4">
+        <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+          <h2 class="text-lg font-semibold text-slate-800">Huỷ phiếu thanh toán</h2>
+          <button
+            @click="closeCancelModal"
+            class="text-slate-400 hover:text-slate-600 text-xl"
+          >
+            &times;
+          </button>
+        </div>
+        <div class="px-6 py-4 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Tiêu đề huỷ phiếu</label>
+            <input
+              v-model="cancelTitle"
+              type="text"
+              class="w-full h-9 px-3 border border-slate-300 rounded-sm text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400"
+              placeholder="Nhập tiêu đề..."
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Nội dung huỷ phiếu</label>
+            <textarea
+              v-model="cancelContent"
+              rows="4"
+              class="w-full px-3 py-2 border border-slate-300 rounded-sm text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400"
+              placeholder="Nhập nội dung..."
+            ></textarea>
+          </div>
+        </div>
+        <div class="px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
+          <button
+            @click="closeCancelModal"
+            class="h-9 px-4 rounded-sm bg-slate-600 text-white text-sm hover:bg-slate-700"
+          >
+            Hủy
+          </button>
+          <button
+            @click="submitCancel"
+            :disabled="cancelLoading"
+            class="h-9 px-4 rounded-sm bg-red-600 text-white text-sm hover:bg-red-700 disabled:opacity-50"
+          >
+            {{ cancelLoading ? "Đang xử lý..." : "Xác nhận huỷ" }}
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
