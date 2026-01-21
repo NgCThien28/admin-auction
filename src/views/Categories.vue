@@ -117,6 +117,9 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import axios from "axios";
+import { useToast } from '@/stores/useToast.js';
+
+const { addToast } = useToast();
 
 const cates = ref([]);
 const loading = ref(false);
@@ -177,16 +180,22 @@ const submit = async () => {
       await axios.put(`http://localhost:8082/api/cates/${form.value.madm}`, {
         tendm: form.value.tendm,
       });
+      addToast("Sửa danh mục thành công!", "success");
     } else {
-      const res = await axios.post("http://localhost:8082/api/cates", {
+      await axios.post("http://localhost:8082/api/cates", {
         tendm: form.value.tendm,
+      }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
+      addToast("Thêm danh mục thành công!", "success");
     }
     await fetchCates();
     closeModal();
   } catch (e) {
     console.error(e);
-    alert(e.response?.data?.message || "Có lỗi xảy ra khi lưu danh mục.");
+    addToast(isEdit.value ? "Sửa danh mục thất bại" : "Thêm danh mục thất bại", "error");
   } finally {
     saving.value = false;
   }
@@ -199,9 +208,10 @@ const removeCate = async (c) => {
   try {
     await axios.delete(`http://localhost:8082/api/cates/${c.madm}`);
     await fetchCates();
+    addToast("Xóa danh mục thành công!", "success");
   } catch (e) {
     console.error(e);
-    alert(e.response?.data?.message || "Không thể xóa danh mục.");
+    addToast("Xóa danh mục thất bại.", "error");
   } finally {
     busyId.value = null;
   }

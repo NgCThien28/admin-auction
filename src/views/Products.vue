@@ -2,6 +2,10 @@
 import { ref, onMounted, computed, reactive, watch } from "vue";
 import axios from "axios";
 import Cookies from "js-cookie";
+import { useToast } from '@/stores/useToast.js';
+import { add } from "lodash-es";
+
+const { addToast } = useToast();
 
 const products = ref([]);
 const loading = ref(true);
@@ -91,6 +95,7 @@ const fetchProducts = async () => {
     });
   } catch (err) {
     console.error("Lỗi API sản phẩm:", err);
+    addToast("Không tải được danh sách sản phẩm.", "error");
     products.value = [];
     totalPages.value = 0;
     totalElements.value = 0;
@@ -239,11 +244,11 @@ async function saveAndApproveProduct() {
     if (index !== -1) {
       Object.assign(products.value[index], selectedProductForEdit.value);
     }
-    alert("Lưu và duyệt sản phẩm thành công.");
+    addToast("Duyệt sản phẩm thành công.", "success");
     closeEditModal();
   } catch (err) {
     console.error("Lỗi khi lưu và duyệt sản phẩm:", err);
-    alert("Lưu và duyệt sản phẩm thất bại. Vui lòng thử lại.");
+    addToast("Duyệt sản phẩm thất bại. Vui lòng thử lại.", "error");
   } finally {
     actionLoading[masp] = false;
   }
@@ -289,11 +294,11 @@ async function submitReject() {
     if (index !== -1) {
       Object.assign(products.value[index], selectedProductForReject.value);
     }
-    alert("Huỷ sản phẩm thành công.");
+    addToast("Huỷ sản phẩm thành công.", "success");
     closeRejectModal();
   } catch (err) {
     console.error("Lỗi khi huỷ sản phẩm:", err);
-    alert("Huỷ sản phẩm thất bại. Vui lòng thử lại.");
+    addToast("Huỷ sản phẩm thất bại. Vui lòng thử lại.", "error");
   } finally {
     actionLoading[masp] = false;
   }
@@ -319,7 +324,7 @@ function formatCurrency(n) {
   );
 }
 
-// Hàm xử lý format giá (tái sử dụng từ UpdateProduct.vue)
+// Hàm xử lý format giá 
 function onPriceInputEdit(e) {
   let val = e.target.value.replace(/[^\d]/g, ""); // Chỉ giữ số
   editedProduct.giamongdoi = val ? Number(val) : null;

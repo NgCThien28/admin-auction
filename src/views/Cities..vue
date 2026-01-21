@@ -117,6 +117,10 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import axios from "axios";
+import { useToast } from '@/stores/useToast.js';
+import { add } from "lodash-es";
+
+const { addToast } = useToast();
 
 const cities = ref([]);
 const loading = ref(false);
@@ -140,7 +144,7 @@ const fetchCities = async () => {
     cities.value = res.data.result || [];
   } catch (e) {
     console.error(e);
-    alert("Không tải được danh sách thành phố.");
+    addToast("Không tải được danh sách thành phố.", "error");
   } finally {
     loading.value = false;
   }
@@ -177,16 +181,18 @@ const submit = async () => {
       await axios.put(`http://localhost:8082/api/cities/${form.value.matp}`, {
         tentp: form.value.tentp,
       });
+      addToast("Sửa thành phố thành công!", "success");
     } else {
       const res = await axios.post("http://localhost:8082/api/cities", {
         tentp: form.value.tentp,
       });
+      addToast("Thêm thành phố thành công!", "success");
     }
     await fetchCities();
     closeModal();
   } catch (e) {
     console.error(e);
-    alert(e.response?.data?.message || "Có lỗi xảy ra khi lưu thành phố.");
+    addToast("Lưu thành phố thất bại.", "error");
   } finally {
     saving.value = false;
   }
@@ -199,9 +205,10 @@ const removeCity = async (c) => {
   try {
     await axios.delete(`http://localhost:8082/api/cities/${c.matp}`);
     await fetchCities();
+    addToast("Xóa thành phố thành công!", "success");
   } catch (e) {
     console.error(e);
-    alert(e.response?.data?.message || "Không thể xóa thành phố.");
+    addToast("Xóa thành phố thất bại.", "error");
   } finally {
     busyId.value = null;
   }

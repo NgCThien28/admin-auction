@@ -1,7 +1,9 @@
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
 import axios from "axios";
+import { useToast } from '@/stores/useToast.js';
 
+const { addToast } = useToast();
 const users = ref([]);
 const loading = ref(false);
 const search = ref("");
@@ -41,7 +43,7 @@ const fetchUsers = async () => {
     totalElements.value = result.page.totalElements;
   } catch (e) {
     console.error(e);
-    alert("Không tải được danh sách user.");
+    addToast("Không tải được danh sách user.", "error");
   } finally {
     loading.value = false;
   }
@@ -54,7 +56,7 @@ const fetchUserDetail = async (matk) => {
     selectedUser.value = res.data.result;
   } catch (e) {
     console.error(e);
-    alert("Không tải được chi tiết user.");
+    addToast("Không tải được chi tiết user.", "error");
   } finally {
     loadingDetail.value = false;
   }
@@ -66,6 +68,7 @@ const banUser = async (matk) => {
   try {
     const res = await axios.put(`http://localhost:8082/api/admins/banned-user/${matk}`);
     replaceUser(res.data.result);
+    addToast('Khoá tài khoản thành công!', 'success');
   } finally {
     setBusy(matk, false);
   }
@@ -77,6 +80,7 @@ const unbanUser = async (matk) => {
   try {
     const res = await axios.put(`http://localhost:8082/api/admins/unban-user/${matk}`);
     replaceUser(res.data.result);
+    addToast('Mở khoá tài khoản thành công!', 'success');
   } finally {
     setBusy(matk, false);
   }

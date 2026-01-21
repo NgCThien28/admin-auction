@@ -359,6 +359,14 @@ onMounted(fetchPayments);
             <span class="text-sm text-slate-800">{{ selectedPayment.matt }}</span>
           </div>
           <div class="grid grid-cols-[120px_1fr] gap-3">
+            <span class="text-sm font-medium text-slate-600">Mã phiên đấu giá:</span>
+            <span class="text-sm text-slate-800">{{ selectedPayment.phienDauGia.maphiendg }}</span>
+          </div>
+          <div class="grid grid-cols-[120px_1fr] gap-3">
+            <span class="text-sm font-medium text-slate-600">Mã khách hàng:</span>
+            <span class="text-sm text-slate-800">{{ selectedPayment.taiKhoanKhachThanhToan.matk }}</span>
+          </div>
+          <div class="grid grid-cols-[120px_1fr] gap-3">
             <span class="text-sm font-medium text-slate-600">Ngày thanh toán:</span>
             <span class="text-sm text-slate-800">{{ formatDateTime(selectedPayment.thoigianthanhtoan) }}</span>
           </div>

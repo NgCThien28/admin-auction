@@ -3,7 +3,10 @@ import { ref, onMounted, computed, reactive, watch } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
 import Cookies from "js-cookie";
+import { useToast } from '@/stores/useToast.js';
+import { add } from "lodash-es";
 
+const { addToast } = useToast();
 const router = useRouter();
 const auctions = ref([]);
 const loading = ref(true);
@@ -326,11 +329,11 @@ async function submitApprove() {
         });
       }
     }
-    alert(res.data.message || "Duyệt thành công!");
+    addToast("Duyệt thành công!", 'success');
     closeApproveModal();
   } catch (err) {
     console.error(err);
-    alert("Duyệt thất bại!");
+    addToast("Duyệt thất bại!", "error");
   } finally {
     actionLoading[id] = false;
   }
@@ -373,11 +376,11 @@ async function submitReject() {
     if (index !== -1) {
       auctions.value[index].trangthai = res.data.result?.trangthai || "Đã từ chối";
     }
-    alert(res.data.message || "Từ chối thành công!");
+    addToast("Từ chối thành công!", "success");
     closeRejectModal();
   } catch (err) {
     console.error(err);
-    alert("Từ chối thất bại!");
+    addToast("Từ chối thất bại!", "error");
   } finally {
     actionLoading[id] = false;
   }

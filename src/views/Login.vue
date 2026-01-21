@@ -4,7 +4,9 @@ import axios from "axios";
 import Cookies from "js-cookie";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "../stores/auth";
+import { useToast } from '@/stores/useToast.js'; 
 
+const { addToast } = useToast();
 const router = useRouter();
 const auth = useAuthStore();
 
@@ -33,7 +35,9 @@ const submitLogin = async () => {
       Cookies.set("jwt_admin_token", token);
       auth.setToken(token);
       await auth.fetchUser();
+      addToast('Đăng nhập thành công!', 'success');
       router.push({ name: "Home" });
+      
     } else {
       error.value = res.data.message || "Đăng nhập thất bại.";
     }
@@ -106,7 +110,7 @@ const submitLogin = async () => {
         <button
           type="submit"
           :disabled="loading"
-          class="w-full py-3 mt-2 text-white font-semibold rounded-lg bg-gradient-to-r from-blue-500 to-indigo-500 hover:opacity-90 transition disabled:opacity-50"
+          class="w-full py-3 mt-2 text-white font-semibold rounded-lg bg-linear-to-r from-blue-500 to-indigo-500 hover:opacity-90 transition disabled:opacity-50"
         >
           {{ loading ? "Đang đăng nhập..." : "ĐĂNG NHẬP" }}
         </button>

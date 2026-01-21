@@ -23,8 +23,8 @@ Chart.register(
 );
 
 /* ===== Date range (UI) ===== */
-const from = ref("2025-12-27");
-const to = ref("2026-01-03");
+const from = ref("");
+const to = ref("");
 
 /* ===== Data ===== */
 const successfulSeries = ref([]);
@@ -360,6 +360,7 @@ watch([from, to], () => {
 
 <template>
   <div class="min-h-screen bg-gray-200">
+    <Toast ref="toastRef" />
     <!-- Top stats bar -->
     <section class="bg-blue-700">
       <div class="mx-auto max-w-6xl px-4">
